@@ -81,6 +81,7 @@ func main() {
 	e.Renderer = &TemplateRenderer{}
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
+	e.Use(middleware.CORS())
 	e.Use(appmw.InjectUser(store, database))
 	e.Static("/static", "static")
 
