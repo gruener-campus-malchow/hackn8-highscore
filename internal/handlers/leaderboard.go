@@ -104,3 +104,31 @@ func (h *LeaderboardHandler) LeaderboardPartial(c echo.Context) error {
 	}
 	return c.Render(http.StatusOK, "_leaderboard-partial.html", data)
 }
+
+func (h *LeaderboardHandler) ScoreAPI(c echo.Context) error {
+	cfg, err := h.DB.GetConfig()
+	if err != nil {
+		return err
+	}
+	total, err := h.DB.GetTotalPoints()
+	if err != nil {
+		return err
+	}
+	userCount, err := attendeeCount(cfg, h.DB)
+	if err != nil {
+		return err
+	}
+	threshold := db.ComputeEffectiveThreshold(cfg, userCount)
+
+	eventName := os.Getenv("EVENT_NAME")
+	if eventName == "" {
+		eventName = "hackn8"
+	}
+
+	return c.JSON(http.StatusOK, map[string]any{
+		eventName: map[string]int{
+			"current_score":    total,
+			"gaming_threshold": threshold,
+		},
+	})
+}

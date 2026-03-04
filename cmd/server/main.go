@@ -96,6 +96,7 @@ func main() {
 	// Public
 	e.GET("/", lbH.ShowLeaderboard)
 	e.GET("/api/leaderboard", lbH.LeaderboardPartial)
+	e.GET("/api/score", lbH.ScoreAPI)
 	e.GET("/auth/login", authH.ShowLogin)
 	e.POST("/auth/login", authH.Login)
 	e.GET("/auth/select-attendee", authH.ShowSelectAttendee)
