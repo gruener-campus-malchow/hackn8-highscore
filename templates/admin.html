@@ -1,0 +1,214 @@
+
+{{define "title"}}Admin – hackn8{{end}}
+
+{{define "content"}}
+<div class="admin-page">
+  <h1>Admin Panel</h1>
+
+  {{if .Error}}
+  <div class="alert alert-error">Fehler: {{.Error}}</div>
+  {{end}}
+  {{if .Success}}
+  <div class="alert alert-ok">
+    {{if eq .Success "config_saved"}}Einstellungen gespeichert.
+    {{else if eq .Success "hidden_created"}}Versteckter Code erstellt.
+    {{else if eq .Success "user_promoted"}}Nutzer zum Admin befördert.
+    {{else if eq .Success "user_demoted"}}Admin-Rechte entzogen.
+    {{else}}Aktion erfolgreich.{{end}}
+  </div>
+  {{end}}
+
+  <!-- Stats -->
+  <div class="admin-stats">
+    <div class="stat-card">
+      <div class="stat-val">{{.UserCount}}</div>
+      <div class="stat-lbl">Teilnehmer</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-val">{{.ScanCount}}</div>
+      <div class="stat-lbl">Scans</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-val">{{.TotalPoints}}</div>
+      <div class="stat-lbl">Gesamtpunkte</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-val">{{.EffectiveThreshold}}</div>
+      <div class="stat-lbl">Schwelle</div>
+    </div>
+  </div>
+
+  <!-- Config -->
+  <section class="admin-section">
+    <h2>Einstellungen</h2>
+    <form action="/admin/config" method="post" class="admin-form">
+      <div class="form-row">
+        <div class="form-group">
+          <label>Gaming-Schwelle – Modus</label>
+          <select name="gaming_threshold_mode">
+            <option value="absolute" {{if eq .Config.GamingThresholdMode "absolute"}}selected{{end}}>Absolut (fester Wert)</option>
+            <option value="multiplier" {{if eq .Config.GamingThresholdMode "multiplier"}}selected{{end}}>Multiplikator × Teilnehmer</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Absoluter Schwellwert</label>
+          <input type="number" name="gaming_threshold" value="{{.Config.GamingThreshold}}" min="0">
+        </div>
+        <div class="form-group">
+          <label>Multiplikator</label>
+          <input type="number" name="gaming_threshold_multiplier" value="{{.Config.GamingThresholdMultiplier}}" min="0">
+          <small class="muted">Aktuell: {{.Config.GamingThresholdMultiplier}} × {{.AttendeeCount}} {{if .Config.UsePretixCheckin}}eingecheckte Teilnehmer (Pretix){{else}}registrierte Nutzer (lokal){{end}} = {{.EffectiveThreshold}} Punkte</small>
+        </div>
+        <div class="form-group">
+          <label>
+            <input type="checkbox" name="use_pretix_checkin" value="1" {{if .Config.UsePretixCheckin}}checked{{end}}>
+            Pretix Check-in-Zahl für Multiplikator verwenden
+          </label>
+          <small class="muted">Ein: Pretix-API (eingecheckte Teilnehmer). Aus: lokale Nutzerzahl.</small>
+        </div>
+        <div class="form-group">
+          <label>
+            <input type="checkbox" name="require_pretix_login" value="1" {{if .Config.RequirePretixLogin}}checked{{end}}>
+            Pretix-Ticketprüfung beim Login aktivieren
+          </label>
+          <small class="muted">Ein: Ticket-Code wird gegen Pretix-API validiert. Aus: Jeder Code, der dem Regex entspricht, kann sich anmelden.</small>
+        </div>
+        <div class="form-group">
+          <label>Ticket-Code-Format (Regex)</label>
+          <input type="text" name="ticket_code_regex" value="{{.Config.TicketCodeRegex}}">
+          <small class="muted">Regulärer Ausdruck für den Ticket-Code. Standard: <code>^[A-Z0-9]{5}$</code></small>
+        </div>
+        <div class="form-group">
+          <label>Standard Workshop-Punkte</label>
+          <input type="number" name="default_workshop_points" value="{{.Config.DefaultWorkshopPoints}}" min="0">
+        </div>
+        <div class="form-group">
+          <label>Standard Versteckt-Punkte</label>
+          <input type="number" name="default_hidden_points" value="{{.Config.DefaultHiddenPoints}}" min="0">
+        </div>
+        <div class="form-group">
+          <label>Strafe: veralteter Workshop-Code</label>
+          <input type="number" name="penalty_points" value="{{.Config.PenaltyPoints}}" min="0">
+        </div>
+      </div>
+      <button type="submit" class="btn btn-primary">Speichern</button>
+    </form>
+  </section>
+
+  <!-- Create hidden code -->
+  <section class="admin-section">
+    <h2>Versteckten Code erstellen</h2>
+    <form action="/admin/activity/hidden" method="post" class="admin-form">
+      <div class="form-row">
+        <div class="form-group">
+          <label>Name / Ort</label>
+          <input type="text" name="name" placeholder="z.B. Keller-Code" required>
+        </div>
+        <div class="form-group">
+          <label>Punkte (leer = Standard)</label>
+          <input type="number" name="points" placeholder="{{.Config.DefaultHiddenPoints}}" min="0">
+        </div>
+      </div>
+      <button type="submit" class="btn btn-primary">Erstellen</button>
+    </form>
+  </section>
+
+  <!-- Users -->
+  <section class="admin-section">
+    <h2>Nutzer</h2>
+    {{if .Users}}
+    <div class="admin-table-wrap">
+      <table class="admin-table">
+        <thead>
+          <tr><th>Name</th><th>Ticket-ID</th><th>Punkte</th><th>Rolle</th><th>Aktionen</th></tr>
+        </thead>
+        <tbody>
+          {{range .Users}}
+          <tr>
+            <td>{{.DisplayName}}</td>
+            <td><code>{{.TicketCode}}</code></td>
+            <td>{{.TotalPoints}}</td>
+            <td>{{if .IsAdmin}}<span class="badge badge-ok">Admin</span>{{else}}<span class="badge">Nutzer</span>{{end}}</td>
+            <td class="action-col">
+              {{if .IsAdmin}}
+              <form action="/admin/user/{{.ID}}/demote" method="post" style="display:inline"
+                    onsubmit="return confirm('Admin-Rechte entziehen?')">
+                <button type="submit" class="btn btn-xs btn-warn">Degradieren</button>
+              </form>
+              {{else}}
+              <form action="/admin/user/{{.ID}}/promote" method="post" style="display:inline">
+                <button type="submit" class="btn btn-xs btn-ok">Zum Admin</button>
+              </form>
+              {{end}}
+            </td>
+          </tr>
+          {{end}}
+        </tbody>
+      </table>
+    </div>
+    {{else}}
+    <p class="muted">Noch keine Nutzer.</p>
+    {{end}}
+  </section>
+
+  <!-- Activities -->
+  <section class="admin-section">
+    <h2>Aktivitäten</h2>
+    {{if .Activities}}
+    <div class="admin-table-wrap">
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Typ</th>
+            <th>Erstellt von</th>
+            <th>Punkte</th>
+            <th>Scans</th>
+            <th>Status</th>
+            <th>Aktionen</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{range .Activities}}
+          <tr>
+            <td>{{.Name}}{{if .Description}}<br><small class="muted">{{.Description}}</small>{{end}}</td>
+            <td>
+              {{if eq (printf "%s" .Type) "workshop"}}Workshop{{else}}Versteckt{{end}}
+            </td>
+            <td>{{.CreatorName}}</td>
+            <td>
+              <form action="/admin/activity/{{.ID}}/points" method="post" class="inline-form">
+                <input type="number" name="points" value="{{if .Points}}{{.Points}}{{end}}"
+                       placeholder="Standard" min="0" class="pts-input">
+                <button type="submit" class="btn btn-xs">✓</button>
+              </form>
+            </td>
+            <td>{{.ScanCount}}</td>
+            <td>
+              <span class="badge {{if .Enabled}}badge-ok{{else}}badge-pending{{end}}">
+                {{if .Enabled}}Aktiv{{else}}Inaktiv{{end}}
+              </span>
+            </td>
+            <td class="action-col">
+              <form action="/admin/activity/{{.ID}}/toggle" method="post" style="display:inline">
+                <button type="submit" class="btn btn-xs {{if .Enabled}}btn-warn{{else}}btn-ok{{end}}">
+                  {{if .Enabled}}Deaktivieren{{else}}Aktivieren{{end}}
+                </button>
+              </form>
+              <a href="/admin/activity/{{.ID}}/qr" class="btn btn-xs">QR</a>
+              <form action="/admin/activity/{{.ID}}/delete" method="post" style="display:inline"
+                    onsubmit="return confirm('Wirklich löschen?')">
+                <button type="submit" class="btn btn-xs btn-danger">✕</button>
+              </form>
+            </td>
+          </tr>
+          {{end}}
+        </tbody>
+      </table>
+    </div>
+    {{else}}
+    <p class="muted">Noch keine Aktivitäten.</p>
+    {{end}}
+  </section>
+</div>
+{{end}}

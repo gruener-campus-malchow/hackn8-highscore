@@ -1,0 +1,55 @@
+
+{{define "title"}}QR-Code – {{with .Activity}}{{.Name}}{{end}}{{end}}
+
+{{define "content"}}
+<div class="form-page">
+  <div class="form-card qr-card">
+    <h1>{{with .Activity}}{{.Name}}{{end}}</h1>
+    {{with .Activity}}{{if .Location}}<p class="form-sub">📍 {{.Location}}</p>{{end}}{{end}}
+
+    {{if .Pending}}
+    <div class="scan-icon scan-warn">⏳</div>
+    <p>Dieser Workshop wurde noch nicht vom Admin freigeschaltet.<br>
+    Sobald das passiert, kannst du hier deinen QR-Code abrufen.</p>
+    {{else}}
+    <p class="form-sub">Zeig diesen QR-Code den Teilnehmern zum Scannen.</p>
+    <div hx-get="/workshop/{{with .Activity}}{{.ID}}{{end}}/qr-partial" hx-trigger="every 5s" hx-swap="outerHTML">
+      <img src="{{.QRBase64 | safeURL}}" alt="QR-Code" class="qr-img">
+      <code class="qr-url">{{.ScanURL}}</code>
+      {{with .Activity}}
+      {{if .Points}}
+      <p class="qr-pts">Gibt <strong>{{.Points}} Punkte</strong></p>
+      {{else if $.Config}}
+      <p class="qr-pts">Gibt <strong>{{$.Config.DefaultWorkshopPoints}} Punkte</strong> (Standard)</p>
+      {{end}}
+      {{end}}
+
+      {{if .LastScan}}
+      <div class="last-scan-info">
+        Zuletzt gescannt von <strong>{{.LastScan.UserDisplayName}}</strong>
+        um {{.LastScan.ScannedAt.Format "02.01.2006 15:04:05"}}
+      </div>
+      {{else}}
+      <p class="muted">Noch nicht gescannt.</p>
+      {{end}}
+    </div>
+
+    {{with .Activity}}{{if ne .Type "hidden"}}
+    <form action="/workshop/{{.ID}}/regenerate" method="post"
+          onsubmit="return confirm('Token wirklich neu generieren? Der aktuelle QR-Code wird ungültig.')">
+      <button type="submit" class="btn btn-warn" style="margin-top:.75rem">🔄 Token neu generieren</button>
+    </form>
+    {{end}}{{end}}
+    {{end}}
+
+    <div style="margin-top:1.5rem; display:flex; gap:.75rem; justify-content:center">
+      {{if .IsAdmin}}
+      <a href="/admin" class="btn btn-secondary">← Admin</a>
+      {{else}}
+      <a href="/workshop/register" class="btn btn-secondary">← Workshops</a>
+      {{end}}
+      <a href="/" class="btn btn-primary">Leaderboard</a>
+    </div>
+  </div>
+</div>
+{{end}}

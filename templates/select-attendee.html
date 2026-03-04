@@ -1,0 +1,25 @@
+
+{{define "title"}}Wer bist du? – hackn8{{end}}
+
+{{define "content"}}
+<div class="form-page">
+  <div class="form-card">
+    <h1>Wer bist du?</h1>
+    <p class="form-sub">Dieses Ticket hat mehrere Teilnehmer. Wähle deinen Namen aus.</p>
+
+    <form action="/auth/select-attendee" method="post">
+      <input type="hidden" name="code" value="{{.Code}}">
+      <input type="hidden" name="next" value="{{.Next}}">
+      <div class="attendee-list">
+        {{range .Positions}}
+        <button type="submit" name="position_id" value="{{.PositionID}}" class="btn btn-attendee">
+          {{if .AttendeeName}}{{.AttendeeName}}{{else}}Teilnehmer {{.PositionID}}{{end}}
+        </button>
+        {{end}}
+      </div>
+    </form>
+
+    <a href="/auth/login" class="btn-link" style="display:block;margin-top:1rem;text-align:center">Zurück</a>
+  </div>
+</div>
+{{end}}

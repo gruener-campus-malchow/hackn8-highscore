@@ -1,0 +1,78 @@
+
+{{define "title"}}Workshop anmelden – hackn8{{end}}
+
+{{define "content"}}
+<div class="form-page wide">
+  <div class="form-card">
+    <h1>Workshop / Talk anmelden</h1>
+    <p class="form-sub">Nach der Anmeldung wird dein Workshop von einem Admin freigeschaltet. Danach erhältst du einen QR-Code zum Zeigen.</p>
+
+    {{if eq .Error "empty"}}
+    <div class="alert alert-error">Bitte gib einen Namen ein.</div>
+    {{end}}
+
+    <form action="/workshop/register" method="post">
+      <div class="form-group">
+        <label for="name">Name des Workshops / Talks</label>
+        <input type="text" id="name" name="name"
+               placeholder="z.B. Einführung in CTF" required>
+      </div>
+      <div class="form-group">
+        <label for="description">Beschreibung (optional)</label>
+        <textarea id="description" name="description" rows="3"
+                  placeholder="Kurze Beschreibung…"></textarea>
+      </div>
+      <div class="form-group">
+        <label for="location">Ort / Raum (optional)</label>
+        <input type="text" id="location" name="location"
+               placeholder="z.B. Seminarraum 2">
+      </div>
+      <button type="submit" class="btn btn-primary">Anmelden</button>
+    </form>
+  </div>
+
+  {{if .Activities}}
+  <div class="form-card" style="margin-top:1.5rem">
+    <h2>Deine Workshops</h2>
+    <div class="activity-list">
+      {{range .Activities}}
+      <div class="activity-item">
+        <div class="activity-info">
+          <strong>{{.Name}}</strong>
+          {{if .Description}}<span class="activity-desc">{{.Description}}</span>{{end}}
+          {{if .Location}}<span class="activity-desc">📍 {{.Location}}</span>{{end}}
+          <span class="badge {{if .Enabled}}badge-ok{{else}}badge-pending{{end}}">
+            {{if .Enabled}}✓ Aktiv{{else}}⏳ Ausstehend{{end}}
+          </span>
+        </div>
+        {{if .Enabled}}
+        <a href="/workshop/{{.ID}}/qr" class="btn btn-sm">QR-Code</a>
+        {{end}}
+      </div>
+      {{end}}
+    </div>
+  </div>
+  {{end}}
+
+  {{if .AllWorkshops}}
+  <div class="form-card" style="margin-top:1.5rem">
+    <h2>Alle angemeldeten Workshops</h2>
+    <div class="activity-list">
+      {{range .AllWorkshops}}
+      <div class="activity-item">
+        <div class="activity-info">
+          <strong>{{.Name}}</strong>
+          {{if .Description}}<span class="activity-desc">{{.Description}}</span>{{end}}
+          {{if .Location}}<span class="activity-desc">📍 {{.Location}}</span>{{end}}
+          <span class="activity-desc">von {{.CreatorName}}</span>
+          <span class="badge {{if .Enabled}}badge-ok{{else}}badge-pending{{end}}">
+            {{if .Enabled}}✓ Aktiv{{else}}⏳ Ausstehend{{end}}
+          </span>
+        </div>
+      </div>
+      {{end}}
+    </div>
+  </div>
+  {{end}}
+</div>
+{{end}}

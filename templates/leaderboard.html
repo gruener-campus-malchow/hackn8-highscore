@@ -1,0 +1,133 @@
+{{define "title"}}hackn8 Highscore – Leaderboard{{end}}
+
+{{define "content"}}
+<div class="lb-page" id="lb-page">
+  <div id="lb-dynamic" hx-get="/api/leaderboard" hx-trigger="every 5s" hx-swap="outerHTML">
+    {{template "lb-dynamic" .}}
+  </div>
+
+  <div class="lb-scroll-toggle-wrap">
+    <button id="lb-scroll-btn" class="btn btn-sm btn-secondary" onclick="lbToggleDashboard()">▶ Dashboard</button>
+  </div>
+
+  {{if not .User}}
+  <div class="lb-cta">
+    <a href="/auth/login" class="btn btn-primary">Einloggen &amp; mitmachen</a>
+    <p>Scanne QR-Codes bei Workshops, Talks und versteckten Codes um Punkte zu sammeln!</p>
+  </div>
+  {{end}}
+</div>
+<script>
+  (function () {
+    var SPEED = 80; // px per second
+    var PAUSE_TOP = 5500; // ms pause at top
+    var PAUSE_BOTTOM = 2500; // ms pause at bottom
+    var lastTs = null, pauseUntil = 0, atBottom = false;
+    var active = localStorage.getItem('lb-dashboard') === '1';
+
+    function updateBtn() {
+      var btn = document.getElementById('lb-scroll-btn');
+      var page = document.getElementById('lb-page');
+      if (btn) { btn.textContent = active ? '⏹ Dashboard' : '▶ Dashboard'; }
+      if (page) { page.classList.toggle('dashboard-mode', active); }
+    }
+    updateBtn();
+
+    window.lbToggleDashboard = function () {
+      active = !active;
+      localStorage.setItem('lb-dashboard', active ? '1' : '0');
+      if (active) { lastTs = null; pauseUntil = 0; atBottom = false; }
+      updateBtn();
+    };
+
+    function scroller(ts) {
+      if (active) {
+        if (lastTs === null) { lastTs = ts; pauseUntil = ts + PAUSE_TOP; }
+        var el = document.querySelector('.lb-scroll');
+        if (el && el.scrollHeight > el.clientHeight) {
+          if (ts >= pauseUntil) {
+            if (atBottom) {
+              el.scrollTop = 0;
+              atBottom = false;
+              pauseUntil = ts + PAUSE_TOP;
+            } else {
+              var dt = Math.min((ts - lastTs) / 1000, 0.1);
+              el.scrollTop += SPEED * dt;
+              var max = el.scrollHeight - el.clientHeight;
+              if (el.scrollTop >= max) { el.scrollTop = max; atBottom = true; pauseUntil = ts + PAUSE_BOTTOM; }
+            }
+          }
+        }
+        lastTs = ts;
+      }
+      requestAnimationFrame(scroller);
+    }
+    requestAnimationFrame(scroller);
+
+    // Preserve scroll position across HTMX refreshes
+    var saved = 0;
+    document.addEventListener('htmx:beforeRequest', function (e) {
+      if (e.detail && e.detail.target && e.detail.target.id === 'lb-dynamic') {
+        var el = document.querySelector('.lb-scroll');
+        if (el) saved = el.scrollTop;
+      }
+    });
+    document.addEventListener('htmx:afterSwap', function (e) {
+      if (e.detail && e.detail.target && e.detail.target.id === 'lb-dynamic') {
+        var el = document.querySelector('.lb-scroll');
+        if (el) el.scrollTop = saved;
+        updateBtn();
+      }
+    });
+  })();
+</script>
+{{end}}
+
+{{define "lb-dynamic"}}
+{{if .GamingActive}}
+<div class="gaming-banner gaming-active">
+  🎮 GAMING ERLAUBT! Viel Spaß!
+</div>
+{{else}}
+<div class="gaming-banner gaming-locked">
+  🔒 Gaming gesperrt – Schwelle: {{.Threshold}} Punkte (gesamt)
+</div>
+{{end}}
+
+<div class="progress-wrap">
+  <div class="progress-bar">
+    <div class="progress-fill" style="width: {{.Progress}}%"></div>
+  </div>
+  <div class="progress-label">
+    <span class="lb-total-pts-count">{{.TotalPoints}}</span> / {{.Threshold}} Punkte
+    {{if .GamingActive}}✓{{end}}
+  </div>
+</div>
+
+{{if .Entries}}
+<div class="lb-scroll">
+  <table class="lb-table">
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Name</th>
+        <th>Punkte</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{range .Entries}}
+      <tr {{if .IsCurrentUser}}class="lb-me" {{end}}>
+        <td class="lb-rank">
+          {{if eq .Rank 1}}🥇{{else if eq .Rank 2}}🥈{{else if eq .Rank 3}}🥉{{else}}{{.Rank}}{{end}}
+        </td>
+        <td class="lb-name">{{.DisplayName}}</td>
+        <td class="lb-pts">{{.TotalPoints}}</td>
+      </tr>
+      {{end}}
+    </tbody>
+  </table>
+</div>
+{{else}}
+<p class="lb-empty">Noch keine Punkte – seid ihr wach? 👀</p>
+{{end}}
+{{end}}

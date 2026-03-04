@@ -1,0 +1,28 @@
+
+{{define "title"}}Nickname – hackn8{{end}}
+
+{{define "content"}}
+<div class="form-page">
+  <div class="form-card">
+    <h1>Nickname wählen</h1>
+    <p class="form-sub">Wie soll dein Name auf dem Leaderboard stehen?</p>
+
+    {{if eq .Error "empty"}}
+    <div class="alert alert-error">Bitte gib einen Nickname ein.</div>
+    {{else if eq .Error "toolong"}}
+    <div class="alert alert-error">Nickname darf max. 32 Zeichen lang sein.</div>
+    {{end}}
+
+    <form action="/auth/nickname" method="post">
+      <input type="hidden" name="next" value="{{.Next}}">
+      <div class="form-group">
+        <label for="nickname">Nickname</label>
+        <input type="text" id="nickname" name="nickname"
+               placeholder="z.B. l33thacker42"
+               maxlength="32" required autofocus>
+      </div>
+      <button type="submit" class="btn btn-primary btn-full">Speichern</button>
+    </form>
+  </div>
+</div>
+{{end}}

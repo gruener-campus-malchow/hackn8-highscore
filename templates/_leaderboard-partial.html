@@ -1,0 +1,50 @@
+{{define "partial"}}
+<div id="lb-dynamic" hx-get="/api/leaderboard" hx-trigger="every 5s" hx-swap="outerHTML">
+  {{if .GamingActive}}
+  <div class="gaming-banner gaming-active">
+    🎮 GAMING ERLAUBT! Viel Spaß!
+  </div>
+  {{else}}
+  <div class="gaming-banner gaming-locked">
+    🔒 Gaming gesperrt – Schwelle: {{.Threshold}} Punkte (gesamt)
+  </div>
+  {{end}}
+
+  <div class="progress-wrap">
+    <div class="progress-bar">
+      <div class="progress-fill" style="width: {{.Progress}}%"></div>
+    </div>
+    <div class="progress-label">
+      <span class="lb-total-pts-count">{{.TotalPoints}}</span> / {{.Threshold}} Punkte
+      {{if .GamingActive}}✓{{end}}
+    </div>
+  </div>
+
+  {{if .Entries}}
+  <div class="lb-scroll">
+    <table class="lb-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Name</th>
+          <th>Punkte</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{range .Entries}}
+        <tr {{if .IsCurrentUser}}class="lb-me" {{end}}>
+          <td class="lb-rank">
+            {{if eq .Rank 1}}🥇{{else if eq .Rank 2}}🥈{{else if eq .Rank 3}}🥉{{else}}{{.Rank}}{{end}}
+          </td>
+          <td class="lb-name">{{.DisplayName}}</td>
+          <td class="lb-pts">{{.TotalPoints}}</td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+  {{else}}
+  <p class="lb-empty">Noch keine Punkte – seid ihr wach? 👀</p>
+  {{end}}
+</div>
+{{end}}

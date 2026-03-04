@@ -1,0 +1,37 @@
+
+{{define "title"}}Scan – hackn8{{end}}
+
+{{define "content"}}
+<div class="form-page">
+  <div class="form-card scan-result">
+    {{if eq .Status "success"}}
+    <div class="scan-icon scan-ok">✓</div>
+    <h1>+{{.Points}} Punkte!</h1>
+    <p>Du hast <strong>{{with .Activity}}{{.Name}}{{end}}</strong> erfolgreich abgeschlossen.</p>
+    {{else if eq .Status "already"}}
+    <div class="scan-icon scan-warn">!</div>
+    <h1>Schon gescannt</h1>
+    <p>Du hast <strong>{{with .Activity}}{{.Name}}{{end}}</strong> bereits gescannt.</p>
+    {{else if eq .Status "disabled"}}
+    <div class="scan-icon scan-warn">⏳</div>
+    <h1>Noch nicht freigeschaltet</h1>
+    <p><strong>{{with .Activity}}{{.Name}}{{end}}</strong> wurde noch nicht vom Admin aktiviert.</p>
+    {{else if eq .Status "penalty"}}
+    <div class="scan-icon scan-err">✕</div>
+    <h1>Veralteter Code!</h1>
+    <p>Dieser QR-Code wurde bereits weitergewechselt – du hattest ein Foto vom alten Code.</p>
+    {{if gt .Penalty 0}}
+    <p><strong>−{{.Penalty}} Punkte</strong> Strafe.</p>
+    {{else}}
+    <p>Keine Punkte abgezogen (Punktestand war bereits 0).</p>
+    {{end}}
+    {{else if eq .Status "notfound"}}
+    <div class="scan-icon scan-err">✕</div>
+    <h1>Ungültiger Code</h1>
+    <p>Dieser QR-Code ist nicht gültig.</p>
+    {{end}}
+
+    <a href="/" class="btn btn-primary" style="margin-top:1.5rem">Zum Leaderboard</a>
+  </div>
+</div>
+{{end}}

@@ -1,0 +1,39 @@
+{{define "base"}}
+<!DOCTYPE html>
+<html lang="de">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{block "title" .}}hackn8 Highscore{{end}}</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <script src="https://unpkg.com/htmx.org@1.9.12/dist/htmx.min.js" defer></script>
+</head>
+
+<body>
+  <header class="cis-header">
+    <div class="header-inner">
+      <a href="/" class="header-brand">
+        <span class="header-logo">⚡</span>
+        <span class="header-title">hackn8 Highscore</span>
+      </a>
+      <nav class="header-nav">
+        {{with .User}}
+        <span class="nav-user">{{.DisplayName}}</span>
+        {{if .IsAdmin}}<a href="/admin" class="nav-link nav-admin">Admin</a>{{end}}
+        <a href="/workshop/register" class="nav-link">Workshops/Aktivitäten</a>
+        <form action="/auth/logout" method="post" style="display:inline">
+          <button type="submit" class="nav-link nav-btn">Logout</button>
+        </form>
+        {{else}}
+        <a href="/auth/login" class="nav-link">Login</a>
+        {{end}}
+      </nav>
+    </div>
+  </header>
+  <main>
+    {{block "content" .}}{{end}}
+  </main>
+</body>
+
+</html>{{end}}
