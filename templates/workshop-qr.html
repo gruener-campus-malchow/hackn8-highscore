@@ -1,4 +1,3 @@
-
 {{define "title"}}QR-Code – {{with .Activity}}{{.Name}}{{end}}{{end}}
 
 {{define "content"}}
@@ -10,10 +9,10 @@
     {{if .Pending}}
     <div class="scan-icon scan-warn">⏳</div>
     <p>Dieser Workshop wurde noch nicht vom Admin freigeschaltet.<br>
-    Sobald das passiert, kannst du hier deinen QR-Code abrufen.</p>
+      Sobald das passiert, kannst du hier deinen QR-Code abrufen.</p>
     {{else}}
     <p class="form-sub">Zeig diesen QR-Code den Teilnehmern zum Scannen.</p>
-    <div hx-get="/workshop/{{with .Activity}}{{.ID}}{{end}}/qr-partial" hx-trigger="every 5s" hx-swap="outerHTML">
+    <div hx-get="/workshop/{{with .Activity}}{{.ID}}{{end}}/qr-partial" hx-trigger="every 1s" hx-swap="outerHTML">
       <img src="{{.QRBase64 | safeURL}}" alt="QR-Code" class="qr-img">
       <code class="qr-url">{{.ScanURL}}</code>
       {{with .Activity}}
@@ -36,7 +35,7 @@
 
     {{with .Activity}}{{if ne .Type "hidden"}}
     <form action="/workshop/{{.ID}}/regenerate" method="post"
-          onsubmit="return confirm('Token wirklich neu generieren? Der aktuelle QR-Code wird ungültig.')">
+      onsubmit="return confirm('Token wirklich neu generieren? Der aktuelle QR-Code wird ungültig.')">
       <button type="submit" class="btn btn-warn" style="margin-top:.75rem">🔄 Token neu generieren</button>
     </form>
     {{end}}{{end}}

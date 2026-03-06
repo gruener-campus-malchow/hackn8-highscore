@@ -1,5 +1,5 @@
 {{define "partial"}}
-<div hx-get="/workshop/{{.Activity.ID}}/qr-partial" hx-trigger="every 5s" hx-swap="outerHTML">
+<div hx-get="/workshop/{{.Activity.ID}}/qr-partial" hx-trigger="every 1s" hx-swap="outerHTML">
   <img src="{{.QRBase64 | safeURL}}" alt="QR-Code" class="qr-img">
   <code class="qr-url">{{.ScanURL}}</code>
   {{with .Activity}}
