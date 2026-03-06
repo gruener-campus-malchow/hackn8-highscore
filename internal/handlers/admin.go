@@ -155,11 +155,12 @@ func (h *AdminHandler) UpdateConfig(c echo.Context) error {
 		}
 	}
 	fields := map[string]string{
-		"gaming_threshold":           c.FormValue("gaming_threshold"),
+		"gaming_threshold":            c.FormValue("gaming_threshold"),
 		"gaming_threshold_multiplier": c.FormValue("gaming_threshold_multiplier"),
-		"default_workshop_points":    c.FormValue("default_workshop_points"),
-		"default_hidden_points":      c.FormValue("default_hidden_points"),
-		"penalty_points":             c.FormValue("penalty_points"),
+		"default_workshop_points":     c.FormValue("default_workshop_points"),
+		"default_hidden_points":       c.FormValue("default_hidden_points"),
+		"penalty_points":              c.FormValue("penalty_points"),
+		"creator_bonus_percentage":    c.FormValue("creator_bonus_percentage"),
 	}
 	for key, val := range fields {
 		val = strings.TrimSpace(val)
@@ -242,12 +243,60 @@ func (h *AdminHandler) ShowQR(c echo.Context) error {
 	})
 }
 
+func (h *AdminHandler) ToggleLeaderboardHidden(c echo.Context) error {
+	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest)
+	}
+	user, err := h.DB.GetUserByID(id)
+	if err != nil || user == nil {
+		return echo.NewHTTPError(http.StatusNotFound)
+	}
+	if err := h.DB.SetLeaderboardHidden(id, !user.HiddenFromLeaderboard); err != nil {
+		return err
+	}
+	if user.HiddenFromLeaderboard {
+		return c.Redirect(http.StatusFound, "/admin?success=leaderboard_shown")
+	}
+	return c.Redirect(http.StatusFound, "/admin?success=leaderboard_hidden")
+}
+
+func (h *AdminHandler) AdjustUserPoints(c echo.Context) error {
+	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest)
+	}
+	raw := strings.TrimSpace(c.FormValue("delta"))
+	if raw == "" {
+		return c.Redirect(http.StatusFound, "/admin?error=invalid_points")
+	}
+	delta, err := strconv.Atoi(raw)
+	if err != nil {
+		return c.Redirect(http.StatusFound, "/admin?error=invalid_points")
+	}
+	if err := h.DB.AddPoints(id, delta); err != nil {
+		return err
+	}
+	return c.Redirect(http.StatusFound, "/admin?success=points_adjusted")
+}
+
 func (h *AdminHandler) DeleteActivity(c echo.Context) error {
 	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest)
 	}
 	if err := h.DB.DeleteActivity(id); err != nil {
+		return err
+	}
+	return c.Redirect(http.StatusFound, "/admin")
+}
+
+func (h *AdminHandler) ToggleCreatorBonus(c echo.Context) error {
+	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest)
+	}
+	if err := h.DB.ToggleCreatorBonus(id); err != nil {
 		return err
 	}
 	return c.Redirect(http.StatusFound, "/admin")

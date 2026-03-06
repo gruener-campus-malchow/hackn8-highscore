@@ -2,20 +2,38 @@
 
 {{define "content"}}
 <div class="lb-page" id="lb-page">
-  <div id="lb-dynamic" hx-get="/api/leaderboard" hx-trigger="every 5s" hx-swap="outerHTML">
-    {{template "lb-dynamic" .}}
+  <div class="lb-main">
+    <div id="lb-dynamic" hx-get="/api/leaderboard" hx-trigger="every 5s" hx-swap="outerHTML">
+      {{template "lb-dynamic" .}}
+    </div>
+
+    <div class="lb-scroll-toggle-wrap">
+      <button id="lb-scroll-btn" class="btn btn-sm btn-secondary" onclick="lbToggleDashboard()">▶ Dashboard</button>
+    </div>
+
+    {{if not .User}}
+    <div class="lb-cta">
+      <a href="/auth/login" class="btn btn-primary">Einloggen &amp; mitmachen</a>
+      <p>Scanne QR-Codes bei Workshops, Talks und versteckten Codes um Punkte zu sammeln!</p>
+    </div>
+    {{end}}
   </div>
 
-  <div class="lb-scroll-toggle-wrap">
-    <button id="lb-scroll-btn" class="btn btn-sm btn-secondary" onclick="lbToggleDashboard()">▶ Dashboard</button>
+  <div class="lb-dashboard-panel" style="display:none">
+    <div class="lb-dashboard-qr-wrap">
+      <img class="lb-dashboard-qr" src="{{.DashboardQR | safeURL}}" alt="QR Code">
+      <span class="lb-dashboard-url">{{.PublicURL}}</span>
+    </div>
+    <div class="lb-dashboard-instructions">
+      <h2>So funktioniert's</h2>
+      <ol>
+        <li>Mit Ticket-Code anmelden</li>
+        <li>QR-Codes bei <strong>Workshops/Talks/etc</strong> scannen</li>
+        <li>Versteckte Codes im <strong>Gebäude</strong> finden</li>
+        <li>Genug Punkte sammeln &rarr; <strong>Gaming freischalten!</strong></li>
+      </ol>
+    </div>
   </div>
-
-  {{if not .User}}
-  <div class="lb-cta">
-    <a href="/auth/login" class="btn btn-primary">Einloggen &amp; mitmachen</a>
-    <p>Scanne QR-Codes bei Workshops, Talks und versteckten Codes um Punkte zu sammeln!</p>
-  </div>
-  {{end}}
 </div>
 <script>
   (function () {
@@ -28,8 +46,12 @@
     function updateBtn() {
       var btn = document.getElementById('lb-scroll-btn');
       var page = document.getElementById('lb-page');
+      var panel = document.querySelector('.lb-dashboard-panel');
+      var cta = document.querySelector('.lb-cta');
       if (btn) { btn.textContent = active ? '⏹ Dashboard' : '▶ Dashboard'; }
       if (page) { page.classList.toggle('dashboard-mode', active); }
+      if (panel) { panel.style.display = active ? 'flex' : 'none'; }
+      if (cta) { cta.style.display = active ? 'none' : ''; }
     }
     updateBtn();
 
@@ -90,7 +112,7 @@
 </div>
 {{else}}
 <div class="gaming-banner gaming-locked">
-  🔒 Gaming gesperrt – Schwelle: {{.Threshold}} Punkte (gesamt)
+  🔒 Gaming verboten – Schwelle: {{.Threshold}} Punkte (gesamt)
 </div>
 {{end}}
 

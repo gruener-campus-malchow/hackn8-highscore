@@ -14,6 +14,9 @@
     {{else if eq .Success "hidden_created"}}Versteckter Code erstellt.
     {{else if eq .Success "user_promoted"}}Nutzer zum Admin befördert.
     {{else if eq .Success "user_demoted"}}Admin-Rechte entzogen.
+    {{else if eq .Success "leaderboard_hidden"}}Nutzer aus Bestenliste ausgeblendet.
+    {{else if eq .Success "leaderboard_shown"}}Nutzer in Bestenliste eingeblendet.
+    {{else if eq .Success "points_adjusted"}}Punkte angepasst.
     {{else}}Aktion erfolgreich.{{end}}
   </div>
   {{end}}
@@ -39,8 +42,8 @@
   </div>
 
   <!-- Config -->
-  <section class="admin-section">
-    <h2>Einstellungen</h2>
+  <details class="admin-section">
+    <summary><h2>Einstellungen</h2></summary>
     <form action="/admin/config" method="post" class="admin-form">
       <div class="form-row">
         <div class="form-group">
@@ -49,10 +52,12 @@
             <option value="absolute" {{if eq .Config.GamingThresholdMode "absolute"}}selected{{end}}>Absolut (fester Wert)</option>
             <option value="multiplier" {{if eq .Config.GamingThresholdMode "multiplier"}}selected{{end}}>Multiplikator × Teilnehmer</option>
           </select>
+          <small class="muted">Bestimmt, wie die Mindestpunktzahl für Gaming-Berechtigungen berechnet wird.</small>
         </div>
         <div class="form-group">
           <label>Absoluter Schwellwert</label>
           <input type="number" name="gaming_threshold" value="{{.Config.GamingThreshold}}" min="0">
+          <small class="muted">Feste Punktzahl, die Teilnehmer mindestens erreichen müssen (nur im Modus „Absolut").</small>
         </div>
         <div class="form-group">
           <label>Multiplikator</label>
@@ -81,23 +86,31 @@
         <div class="form-group">
           <label>Standard Workshop-Punkte</label>
           <input type="number" name="default_workshop_points" value="{{.Config.DefaultWorkshopPoints}}" min="0">
+          <small class="muted">Punkte, die Teilnehmer beim Scannen eines Workshop-Codes erhalten, sofern kein aktivitätsspezifischer Wert gesetzt ist.</small>
         </div>
         <div class="form-group">
           <label>Standard Versteckt-Punkte</label>
           <input type="number" name="default_hidden_points" value="{{.Config.DefaultHiddenPoints}}" min="0">
+          <small class="muted">Punkte für das Finden versteckter Codes, sofern kein aktivitätsspezifischer Wert gesetzt ist.</small>
         </div>
         <div class="form-group">
           <label>Strafe: veralteter Workshop-Code</label>
           <input type="number" name="penalty_points" value="{{.Config.PenaltyPoints}}" min="0">
+          <small class="muted">Punktabzug, wenn ein Teilnehmer einen bereits abgelaufenen oder deaktivierten Workshop-Code scannt.</small>
+        </div>
+        <div class="form-group">
+          <label>Creator-Bonus (%)</label>
+          <input type="number" name="creator_bonus_percentage" value="{{.Config.CreatorBonusPercentage}}" min="0" max="100">
+          <small class="muted">Prozentsatz der Scan-Punkte, den Workshop-Ersteller:innen erhalten, wenn der Bonus aktiviert ist.</small>
         </div>
       </div>
       <button type="submit" class="btn btn-primary">Speichern</button>
     </form>
-  </section>
+  </details>
 
   <!-- Create hidden code -->
-  <section class="admin-section">
-    <h2>Versteckten Code erstellen</h2>
+  <details class="admin-section">
+    <summary><h2>Versteckten Code erstellen</h2></summary>
     <form action="/admin/activity/hidden" method="post" class="admin-form">
       <div class="form-row">
         <div class="form-group">
@@ -111,16 +124,16 @@
       </div>
       <button type="submit" class="btn btn-primary">Erstellen</button>
     </form>
-  </section>
+  </details>
 
   <!-- Users -->
-  <section class="admin-section">
-    <h2>Nutzer</h2>
+  <details class="admin-section">
+    <summary><h2>Nutzer</h2></summary>
     {{if .Users}}
     <div class="admin-table-wrap">
       <table class="admin-table">
         <thead>
-          <tr><th>Name</th><th>Ticket-ID</th><th>Punkte</th><th>Rolle</th><th>Aktionen</th></tr>
+          <tr><th>Name</th><th>Ticket-ID</th><th>Punkte</th><th>Rolle</th><th>Bestenliste</th><th>Punkte anpassen</th><th>Aktionen</th></tr>
         </thead>
         <tbody>
           {{range .Users}}
@@ -129,6 +142,15 @@
             <td><code>{{.TicketCode}}</code></td>
             <td>{{.TotalPoints}}</td>
             <td>{{if .IsAdmin}}<span class="badge badge-ok">Admin</span>{{else}}<span class="badge">Nutzer</span>{{end}}</td>
+            <td>
+              {{if .HiddenFromLeaderboard}}<span class="badge badge-pending">Versteckt</span>{{else}}<span class="badge badge-ok">Sichtbar</span>{{end}}
+            </td>
+            <td>
+              <form action="/admin/user/{{.ID}}/points" method="post" class="inline-form">
+                <input type="number" name="delta" placeholder="±Δ" class="pts-input" required>
+                <button type="submit" class="btn btn-xs">✓</button>
+              </form>
+            </td>
             <td class="action-col">
               {{if .IsAdmin}}
               <form action="/admin/user/{{.ID}}/demote" method="post" style="display:inline"
@@ -140,6 +162,11 @@
                 <button type="submit" class="btn btn-xs btn-ok">Zum Admin</button>
               </form>
               {{end}}
+              <form action="/admin/user/{{.ID}}/toggle-hidden" method="post" style="display:inline">
+                <button type="submit" class="btn btn-xs {{if .HiddenFromLeaderboard}}btn-ok{{else}}btn-warn{{end}}">
+                  {{if .HiddenFromLeaderboard}}Einblenden{{else}}Ausblenden{{end}}
+                </button>
+              </form>
             </td>
           </tr>
           {{end}}
@@ -149,11 +176,11 @@
     {{else}}
     <p class="muted">Noch keine Nutzer.</p>
     {{end}}
-  </section>
+  </details>
 
   <!-- Activities -->
-  <section class="admin-section">
-    <h2>Aktivitäten</h2>
+  <details class="admin-section">
+    <summary><h2>Aktivitäten</h2></summary>
     {{if .Activities}}
     <div class="admin-table-wrap">
       <table class="admin-table">
@@ -165,6 +192,7 @@
             <th>Punkte</th>
             <th>Scans</th>
             <th>Status</th>
+            <th>Creator-Bonus</th>
             <th>Aktionen</th>
           </tr>
         </thead>
@@ -189,6 +217,15 @@
                 {{if .Enabled}}Aktiv{{else}}Inaktiv{{end}}
               </span>
             </td>
+            <td>
+              {{if eq (printf "%s" .Type) "workshop"}}
+              <form action="/admin/activity/{{.ID}}/toggle-creator-bonus" method="post" style="display:inline">
+                <button type="submit" class="btn btn-xs {{if .CreatorBonus}}btn-ok{{else}}btn-warn{{end}}">
+                  {{if .CreatorBonus}}An{{else}}Aus{{end}}
+                </button>
+              </form>
+              {{else}}–{{end}}
+            </td>
             <td class="action-col">
               <form action="/admin/activity/{{.ID}}/toggle" method="post" style="display:inline">
                 <button type="submit" class="btn btn-xs {{if .Enabled}}btn-warn{{else}}btn-ok{{end}}">
@@ -209,6 +246,6 @@
     {{else}}
     <p class="muted">Noch keine Aktivitäten.</p>
     {{end}}
-  </section>
+  </details>
 </div>
 {{end}}

@@ -1,0 +1,171 @@
+{{define "title"}}Dein Score – hackn8 Highscore{{end}}
+
+{{define "content"}}
+<div class="myscore-page">
+  <div class="myscore-header">
+    <h1>Dein Score</h1>
+    <div class="myscore-stats">
+      <div class="myscore-stat">
+        <span class="myscore-stat-value">{{.User.TotalPoints}}</span>
+        <span class="myscore-stat-label">Punkte</span>
+      </div>
+      <div class="myscore-stat">
+        <span class="myscore-stat-value">{{len .Scans}}</span>
+        <span class="myscore-stat-label">Scans</span>
+      </div>
+      {{if not .User.HiddenFromLeaderboard}}
+      <div class="myscore-stat">
+        <span class="myscore-stat-value">#{{.Rank}}</span>
+        <span class="myscore-stat-label">Platz</span>
+      </div>
+      {{end}}
+    </div>
+  </div>
+
+  {{if .Scans}}
+  <div class="myscore-list">
+    {{range .Scans}}
+    <div class="myscore-entry">
+      <div class="myscore-entry-info">
+        <span class="myscore-entry-name">{{.ActivityName}}</span>
+        <span class="myscore-entry-type {{if eq .ActivityType "hidden"}}type-hidden{{else}}type-workshop{{end}}">
+          {{if eq .ActivityType "hidden"}}Versteckt{{else}}Workshop{{end}}
+        </span>
+      </div>
+      <div class="myscore-entry-right">
+        <span class="myscore-entry-points">+{{.Points}}</span>
+        <span class="myscore-entry-time">{{.ScannedAt.Format "02.01. 15:04"}}</span>
+      </div>
+    </div>
+    {{end}}
+  </div>
+  {{else}}
+  <div class="myscore-empty">
+    <p>Du hast noch keine Codes gescannt.</p>
+    <p>Schau dich um und sammle Punkte!</p>
+  </div>
+  {{end}}
+</div>
+
+<style>
+.myscore-page {
+  max-width: 600px;
+  margin: 2rem auto;
+  padding: 0 1rem;
+}
+
+.myscore-header {
+  margin-bottom: 2rem;
+}
+
+.myscore-header h1 {
+  margin: 0 0 1rem;
+}
+
+.myscore-stats {
+  display: flex;
+  gap: 1rem;
+}
+
+.myscore-stat {
+  background: var(--gray);
+  border-radius: var(--radius-sm);
+  padding: .75rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 80px;
+}
+
+.myscore-stat-value {
+  font-size: 1.75rem;
+  font-weight: bold;
+  line-height: 1;
+}
+
+.myscore-stat-label {
+  font-size: .75rem;
+  color: var(--gray-text);
+  margin-top: .25rem;
+}
+
+.myscore-list {
+  display: flex;
+  flex-direction: column;
+  gap: .5rem;
+}
+
+.myscore-entry {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--gray);
+  border-radius: var(--radius-sm);
+  padding: .75rem 1rem;
+  gap: 1rem;
+}
+
+.myscore-entry-info {
+  display: flex;
+  flex-direction: column;
+  gap: .2rem;
+  min-width: 0;
+}
+
+.myscore-entry-name {
+  font-weight: bold;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.myscore-entry-type {
+  font-size: .75rem;
+  font-weight: bold;
+  border-radius: 999px;
+  padding: .1rem .5rem;
+  width: fit-content;
+}
+
+.type-workshop {
+  background: var(--green-light);
+  color: var(--green-dark);
+}
+
+.type-hidden {
+  background: #fff3e0;
+  color: #a64d00;
+}
+
+.myscore-entry-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: .2rem;
+  flex-shrink: 0;
+}
+
+.myscore-entry-points {
+  font-weight: bold;
+  color: var(--green-dark);
+  font-size: 1.1rem;
+}
+
+.myscore-entry-time {
+  font-size: .75rem;
+  color: var(--gray-text);
+}
+
+.myscore-empty {
+  background: var(--gray);
+  border-radius: var(--radius);
+  padding: 2rem;
+  text-align: center;
+  color: var(--gray-text);
+}
+
+.myscore-empty p {
+  margin: .5rem 0;
+}
+</style>
+{{end}}

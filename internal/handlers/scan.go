@@ -105,6 +105,17 @@ func (h *ScanHandler) Scan(c echo.Context) error {
 		return err
 	}
 
+	// Award creator bonus for workshop activities (skip if the scanner is the creator)
+	if activity.Type == models.ActivityWorkshop && activity.CreatorBonus &&
+		activity.CreatedBy != 0 && activity.CreatedBy != user.ID {
+		bonus := points * cfg.CreatorBonusPercentage / 100
+		if bonus > 0 {
+			if err := h.DB.AddPoints(activity.CreatedBy, bonus); err != nil {
+				c.Logger().Errorf("creator bonus failed for activity %d: %v", activity.ID, err)
+			}
+		}
+	}
+
 	// Rotate token for workshop activities so shared QR codes become stale
 	if activity.Type == models.ActivityWorkshop {
 		if _, err := h.DB.RotateWorkshopToken(activity.ID); err != nil {

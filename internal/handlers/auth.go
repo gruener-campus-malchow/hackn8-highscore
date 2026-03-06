@@ -156,7 +156,9 @@ func (h *AuthHandler) loginWithCode(c echo.Context, ticketCode, next string) err
 	baseCode := strings.SplitN(ticketCode, "-", 2)[0]
 	if isNew && adminTicket != "" && (ticketCode == adminTicket || baseCode == adminTicket) {
 		_ = h.DB.SetAdmin(user.ID)
+		_ = h.DB.SetLeaderboardHidden(user.ID, true)
 		user.IsAdmin = true
+		user.HiddenFromLeaderboard = true
 	}
 	if isNew && os.Getenv("DEBUG_ADMIN_ALL") != "" {
 		_ = h.DB.SetAdmin(user.ID)

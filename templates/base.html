@@ -21,6 +21,7 @@
         {{with .User}}
         <span class="nav-user">{{.DisplayName}}</span>
         {{if .IsAdmin}}<a href="/admin" class="nav-link nav-admin">Admin</a>{{end}}
+        <a href="/myscore" class="nav-link">Dein Score</a>
         <a href="/workshop/register" class="nav-link">Workshops/Aktivitäten</a>
         <form action="/auth/logout" method="post" style="display:inline">
           <button type="submit" class="nav-link nav-btn">Logout</button>

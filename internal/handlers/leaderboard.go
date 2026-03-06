@@ -1,6 +1,8 @@
 package handlers
 
 import (
+	"encoding/base64"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -9,6 +11,7 @@ import (
 	"github.com/gruener-campus-malchow/hackn8-highscore/internal/models"
 	"github.com/gruener-campus-malchow/hackn8-highscore/internal/pretix"
 	"github.com/labstack/echo/v4"
+	qrcode "github.com/skip2/go-qrcode"
 )
 
 // attendeeCount returns the Pretix checked-in count when use_pretix_checkin is
@@ -27,7 +30,6 @@ func attendeeCount(cfg *models.Config, database *db.DB) (int, error) {
 	return database.GetUserCount()
 }
 
-
 type LeaderboardHandler struct {
 	DB *db.DB
 }
@@ -39,6 +41,8 @@ type leaderboardData struct {
 	GamingActive bool
 	Progress     int // 0-100
 	User         any
+	DashboardQR  string // base64 data URI for the site URL QR code
+	PublicURL    string
 }
 
 func (h *LeaderboardHandler) buildData(user any) (*leaderboardData, error) {
@@ -93,6 +97,16 @@ func (h *LeaderboardHandler) ShowLeaderboard(c echo.Context) error {
 	if err != nil {
 		return err
 	}
+
+	url := baseURL(c)
+	data.PublicURL = url
+	png, err := qrcode.Encode(url, qrcode.Medium, 256)
+	if err != nil {
+		log.Printf("dashboard QR encode error: %v", err)
+	} else {
+		data.DashboardQR = fmt.Sprintf("data:image/png;base64,%s", base64.StdEncoding.EncodeToString(png))
+	}
+
 	return c.Render(http.StatusOK, "leaderboard.html", data)
 }
 

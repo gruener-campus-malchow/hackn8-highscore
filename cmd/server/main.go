@@ -90,6 +90,7 @@ func main() {
 	scanH := &handlers.ScanHandler{DB: database}
 	workshopH := &handlers.WorkshopHandler{DB: database}
 	adminH := &handlers.AdminHandler{DB: database}
+	myScoreH := &handlers.MyScoreHandler{DB: database}
 
 	requireLogin := appmw.RequireLogin(store, database)
 	requireAdmin := appmw.RequireAdmin(store, database)
@@ -107,6 +108,7 @@ func main() {
 	// Authenticated
 	e.GET("/auth/nickname", authH.ShowNickname, requireLogin)
 	e.POST("/auth/nickname", authH.SetNickname, requireLogin)
+	e.GET("/myscore", myScoreH.ShowMyScore, requireLogin)
 	e.GET("/scan/:token", scanH.Scan, requireLogin)
 	e.GET("/workshop/register", workshopH.ShowRegister, requireLogin)
 	e.POST("/workshop/register", workshopH.Register, requireLogin)
@@ -120,10 +122,13 @@ func main() {
 	e.POST("/admin/activity/:id/points", adminH.SetActivityPoints, requireAdmin)
 	e.POST("/admin/activity/hidden", adminH.CreateHiddenActivity, requireAdmin)
 	e.POST("/admin/activity/:id/delete", adminH.DeleteActivity, requireAdmin)
+	e.POST("/admin/activity/:id/toggle-creator-bonus", adminH.ToggleCreatorBonus, requireAdmin)
 	e.GET("/admin/activity/:id/qr", adminH.ShowQR, requireAdmin)
 	e.POST("/admin/config", adminH.UpdateConfig, requireAdmin)
 	e.POST("/admin/user/:id/promote", adminH.PromoteUser, requireAdmin)
 	e.POST("/admin/user/:id/demote", adminH.DemoteUser, requireAdmin)
+	e.POST("/admin/user/:id/toggle-hidden", adminH.ToggleLeaderboardHidden, requireAdmin)
+	e.POST("/admin/user/:id/points", adminH.AdjustUserPoints, requireAdmin)
 
 	log.Printf("Starting on %s", addr)
 	e.Logger.Fatal(e.Start(addr))

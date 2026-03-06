@@ -3,12 +3,13 @@ package models
 import "time"
 
 type User struct {
-	ID          int64
-	TicketCode  string
-	Nickname    string
-	IsAdmin     bool
-	TotalPoints int
-	CreatedAt   time.Time
+	ID                   int64
+	TicketCode           string
+	Nickname             string
+	IsAdmin              bool
+	TotalPoints          int
+	HiddenFromLeaderboard bool
+	CreatedAt            time.Time
 }
 
 func (u *User) DisplayName() string {
@@ -29,16 +30,17 @@ const (
 )
 
 type Activity struct {
-	ID          int64
-	Name        string
-	Description string
-	Location    string
-	Type        ActivityType
-	CreatedBy   int64
-	Enabled     bool
-	Points      *int // nil = use config default
-	Token       string
-	CreatedAt   time.Time
+	ID            int64
+	Name          string
+	Description   string
+	Location      string
+	Type          ActivityType
+	CreatedBy     int64
+	Enabled       bool
+	Points        *int // nil = use config default
+	Token         string
+	CreatedAt     time.Time
+	CreatorBonus  bool // workshop creator gets a percentage of scan points
 }
 
 type Scan struct {
@@ -58,6 +60,7 @@ type Config struct {
 	UsePretixCheckin          bool   // use Pretix checked-in count for multiplier (default: local user count)
 	RequirePretixLogin        bool   // require Pretix ticket verification at login (default: true)
 	TicketCodeRegex           string // regex for ticket code validation (default: ^[A-Z0-9]{5}$)
+	CreatorBonusPercentage    int    // percentage of scan points awarded to workshop creator (0-100)
 }
 
 type LastScanInfo struct {

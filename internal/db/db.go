@@ -95,6 +95,21 @@ func (db *DB) migrate() error {
 	if err != nil && !strings.Contains(err.Error(), "duplicate column name: location") {
 		return err
 	}
+	// Add hidden_from_leaderboard column to existing DBs (ignored if already present)
+	_, err = db.Exec(`ALTER TABLE users ADD COLUMN hidden_from_leaderboard INTEGER NOT NULL DEFAULT 0`)
+	if err != nil && !strings.Contains(err.Error(), "duplicate column name: hidden_from_leaderboard") {
+		return err
+	}
+	// Add creator_bonus column to existing DBs (ignored if already present)
+	_, err = db.Exec(`ALTER TABLE activities ADD COLUMN creator_bonus INTEGER NOT NULL DEFAULT 0`)
+	if err != nil && !strings.Contains(err.Error(), "duplicate column name: creator_bonus") {
+		return err
+	}
+	// Add creator_bonus_percentage config key if not present
+	_, err = db.Exec(`INSERT OR IGNORE INTO config (key, value) VALUES ('creator_bonus_percentage', '10')`)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -111,9 +126,9 @@ func randomToken() (string, error) {
 func (db *DB) GetOrCreateUser(ticketCode string) (*models.User, bool, error) {
 	var u models.User
 	err := db.QueryRow(
-		`SELECT id, ticket_code, nickname, is_admin, total_points FROM users WHERE ticket_code = ?`,
+		`SELECT id, ticket_code, nickname, is_admin, total_points, hidden_from_leaderboard FROM users WHERE ticket_code = ?`,
 		ticketCode,
-	).Scan(&u.ID, &u.TicketCode, &u.Nickname, &u.IsAdmin, &u.TotalPoints)
+	).Scan(&u.ID, &u.TicketCode, &u.Nickname, &u.IsAdmin, &u.TotalPoints, &u.HiddenFromLeaderboard)
 	if err == sql.ErrNoRows {
 		res, err := db.Exec(`INSERT INTO users (ticket_code) VALUES (?)`, ticketCode)
 		if err != nil {
@@ -132,8 +147,8 @@ func (db *DB) GetOrCreateUser(ticketCode string) (*models.User, bool, error) {
 func (db *DB) GetUserByID(id int64) (*models.User, error) {
 	var u models.User
 	err := db.QueryRow(
-		`SELECT id, ticket_code, nickname, is_admin, total_points FROM users WHERE id = ?`, id,
-	).Scan(&u.ID, &u.TicketCode, &u.Nickname, &u.IsAdmin, &u.TotalPoints)
+		`SELECT id, ticket_code, nickname, is_admin, total_points, hidden_from_leaderboard FROM users WHERE id = ?`, id,
+	).Scan(&u.ID, &u.TicketCode, &u.Nickname, &u.IsAdmin, &u.TotalPoints, &u.HiddenFromLeaderboard)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
@@ -161,7 +176,7 @@ func (db *DB) SetAdminStatus(userID int64, isAdmin bool) error {
 
 func (db *DB) GetAllUsers() ([]*models.User, error) {
 	rows, err := db.Query(
-		`SELECT id, ticket_code, nickname, is_admin, total_points FROM users ORDER BY total_points DESC, id ASC`,
+		`SELECT id, ticket_code, nickname, is_admin, total_points, hidden_from_leaderboard FROM users ORDER BY total_points DESC, id ASC`,
 	)
 	if err != nil {
 		return nil, err
@@ -170,7 +185,7 @@ func (db *DB) GetAllUsers() ([]*models.User, error) {
 	var users []*models.User
 	for rows.Next() {
 		var u models.User
-		if err := rows.Scan(&u.ID, &u.TicketCode, &u.Nickname, &u.IsAdmin, &u.TotalPoints); err != nil {
+		if err := rows.Scan(&u.ID, &u.TicketCode, &u.Nickname, &u.IsAdmin, &u.TotalPoints, &u.HiddenFromLeaderboard); err != nil {
 			return nil, err
 		}
 		users = append(users, &u)
@@ -223,6 +238,8 @@ func (db *DB) GetConfig() (*models.Config, error) {
 			if v != "" {
 				cfg.TicketCodeRegex = v
 			}
+		case "creator_bonus_percentage":
+			cfg.CreatorBonusPercentage = n
 		}
 	}
 	return cfg, rows.Err()
@@ -293,8 +310,8 @@ func (db *DB) CreateHiddenActivity(name string, points *int, createdBy int64) (*
 func (db *DB) GetActivityByToken(token string) (*models.Activity, error) {
 	var a models.Activity
 	err := db.QueryRow(
-		`SELECT id, name, description, location, type, created_by, enabled, points, token FROM activities WHERE token = ?`, token,
-	).Scan(&a.ID, &a.Name, &a.Description, &a.Location, &a.Type, &a.CreatedBy, &a.Enabled, &a.Points, &a.Token)
+		`SELECT id, name, description, location, type, created_by, enabled, points, token, creator_bonus FROM activities WHERE token = ?`, token,
+	).Scan(&a.ID, &a.Name, &a.Description, &a.Location, &a.Type, &a.CreatedBy, &a.Enabled, &a.Points, &a.Token, &a.CreatorBonus)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
@@ -304,8 +321,8 @@ func (db *DB) GetActivityByToken(token string) (*models.Activity, error) {
 func (db *DB) GetActivityByID(id int64) (*models.Activity, error) {
 	var a models.Activity
 	err := db.QueryRow(
-		`SELECT id, name, description, location, type, created_by, enabled, points, token FROM activities WHERE id = ?`, id,
-	).Scan(&a.ID, &a.Name, &a.Description, &a.Location, &a.Type, &a.CreatedBy, &a.Enabled, &a.Points, &a.Token)
+		`SELECT id, name, description, location, type, created_by, enabled, points, token, creator_bonus FROM activities WHERE id = ?`, id,
+	).Scan(&a.ID, &a.Name, &a.Description, &a.Location, &a.Type, &a.CreatedBy, &a.Enabled, &a.Points, &a.Token, &a.CreatorBonus)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
@@ -314,7 +331,7 @@ func (db *DB) GetActivityByID(id int64) (*models.Activity, error) {
 
 func (db *DB) GetAllActivities() ([]*models.Activity, error) {
 	rows, err := db.Query(
-		`SELECT id, name, description, location, type, created_by, enabled, points, token FROM activities ORDER BY created_at DESC`,
+		`SELECT id, name, description, location, type, created_by, enabled, points, token, creator_bonus FROM activities ORDER BY created_at DESC`,
 	)
 	if err != nil {
 		return nil, err
@@ -323,7 +340,7 @@ func (db *DB) GetAllActivities() ([]*models.Activity, error) {
 	var activities []*models.Activity
 	for rows.Next() {
 		var a models.Activity
-		if err := rows.Scan(&a.ID, &a.Name, &a.Description, &a.Location, &a.Type, &a.CreatedBy, &a.Enabled, &a.Points, &a.Token); err != nil {
+		if err := rows.Scan(&a.ID, &a.Name, &a.Description, &a.Location, &a.Type, &a.CreatedBy, &a.Enabled, &a.Points, &a.Token, &a.CreatorBonus); err != nil {
 			return nil, err
 		}
 		activities = append(activities, &a)
@@ -333,7 +350,7 @@ func (db *DB) GetAllActivities() ([]*models.Activity, error) {
 
 func (db *DB) GetUserActivities(userID int64) ([]*models.Activity, error) {
 	rows, err := db.Query(
-		`SELECT id, name, description, location, type, created_by, enabled, points, token FROM activities WHERE created_by = ? AND type = 'workshop' ORDER BY created_at DESC`,
+		`SELECT id, name, description, location, type, created_by, enabled, points, token, creator_bonus FROM activities WHERE created_by = ? AND type = 'workshop' ORDER BY created_at DESC`,
 		userID,
 	)
 	if err != nil {
@@ -343,7 +360,7 @@ func (db *DB) GetUserActivities(userID int64) ([]*models.Activity, error) {
 	var activities []*models.Activity
 	for rows.Next() {
 		var a models.Activity
-		if err := rows.Scan(&a.ID, &a.Name, &a.Description, &a.Location, &a.Type, &a.CreatedBy, &a.Enabled, &a.Points, &a.Token); err != nil {
+		if err := rows.Scan(&a.ID, &a.Name, &a.Description, &a.Location, &a.Type, &a.CreatedBy, &a.Enabled, &a.Points, &a.Token, &a.CreatorBonus); err != nil {
 			return nil, err
 		}
 		activities = append(activities, &a)
@@ -390,10 +407,20 @@ func (db *DB) AddPoints(userID int64, points int) error {
 
 // Leaderboard
 
+func (db *DB) SetLeaderboardHidden(userID int64, hidden bool) error {
+	v := 0
+	if hidden {
+		v = 1
+	}
+	_, err := db.Exec(`UPDATE users SET hidden_from_leaderboard = ? WHERE id = ?`, v, userID)
+	return err
+}
+
 func (db *DB) GetLeaderboard() ([]*models.LeaderboardEntry, error) {
 	rows, err := db.Query(`
 		SELECT id, nickname, ticket_code, total_points
 		FROM users
+		WHERE hidden_from_leaderboard = 0
 		ORDER BY total_points DESC, id ASC
 		LIMIT 100
 	`)
@@ -450,6 +477,11 @@ func (db *DB) DeleteActivity(id int64) error {
 	return err
 }
 
+func (db *DB) ToggleCreatorBonus(id int64) error {
+	_, err := db.Exec(`UPDATE activities SET creator_bonus = NOT creator_bonus WHERE id = ? AND type = 'workshop'`, id)
+	return err
+}
+
 func (db *DB) GetUserCount() (int, error) {
 	var count int
 	err := db.QueryRow(`SELECT COUNT(*) FROM users`).Scan(&count)
@@ -471,7 +503,7 @@ type ActivityWithCreator struct {
 
 func (db *DB) GetAllWorkshopsWithCreators() ([]*ActivityWithCreator, error) {
 	rows, err := db.Query(`
-		SELECT a.id, a.name, a.description, a.location, a.type, a.created_by, a.enabled, a.points, a.token,
+		SELECT a.id, a.name, a.description, a.location, a.type, a.created_by, a.enabled, a.points, a.token, a.creator_bonus,
 		       COALESCE(NULLIF(u.nickname,''), u.ticket_code) as creator_name,
 		       COUNT(s.id) as scan_count
 		FROM activities a
@@ -490,7 +522,7 @@ func (db *DB) GetAllWorkshopsWithCreators() ([]*ActivityWithCreator, error) {
 		var ac ActivityWithCreator
 		if err := rows.Scan(
 			&ac.ID, &ac.Name, &ac.Description, &ac.Location, &ac.Type, &ac.CreatedBy,
-			&ac.Enabled, &ac.Points, &ac.Token, &ac.CreatorName, &ac.ScanCount,
+			&ac.Enabled, &ac.Points, &ac.Token, &ac.CreatorBonus, &ac.CreatorName, &ac.ScanCount,
 		); err != nil {
 			return nil, fmt.Errorf("scan: %w", err)
 		}
@@ -501,7 +533,7 @@ func (db *DB) GetAllWorkshopsWithCreators() ([]*ActivityWithCreator, error) {
 
 func (db *DB) GetAllActivitiesWithCreators() ([]*ActivityWithCreator, error) {
 	rows, err := db.Query(`
-		SELECT a.id, a.name, a.description, a.location, a.type, a.created_by, a.enabled, a.points, a.token,
+		SELECT a.id, a.name, a.description, a.location, a.type, a.created_by, a.enabled, a.points, a.token, a.creator_bonus,
 		       COALESCE(NULLIF(u.nickname,''), u.ticket_code) as creator_name,
 		       COUNT(s.id) as scan_count
 		FROM activities a
@@ -519,7 +551,7 @@ func (db *DB) GetAllActivitiesWithCreators() ([]*ActivityWithCreator, error) {
 		var ac ActivityWithCreator
 		if err := rows.Scan(
 			&ac.ID, &ac.Name, &ac.Description, &ac.Location, &ac.Type, &ac.CreatedBy,
-			&ac.Enabled, &ac.Points, &ac.Token, &ac.CreatorName, &ac.ScanCount,
+			&ac.Enabled, &ac.Points, &ac.Token, &ac.CreatorBonus, &ac.CreatorName, &ac.ScanCount,
 		); err != nil {
 			return nil, fmt.Errorf("scan: %w", err)
 		}
@@ -557,16 +589,72 @@ func (db *DB) RotateWorkshopToken(activityID int64) (string, error) {
 func (db *DB) GetActivityByInvalidatedToken(token string) (*models.Activity, error) {
 	var a models.Activity
 	err := db.QueryRow(`
-		SELECT a.id, a.name, a.description, a.location, a.type, a.created_by, a.enabled, a.points, a.token
+		SELECT a.id, a.name, a.description, a.location, a.type, a.created_by, a.enabled, a.points, a.token, a.creator_bonus
 		FROM invalidated_tokens it
 		JOIN activities a ON a.id = it.activity_id
 		WHERE it.token = ?
 		LIMIT 1
-	`, token).Scan(&a.ID, &a.Name, &a.Description, &a.Location, &a.Type, &a.CreatedBy, &a.Enabled, &a.Points, &a.Token)
+	`, token).Scan(&a.ID, &a.Name, &a.Description, &a.Location, &a.Type, &a.CreatedBy, &a.Enabled, &a.Points, &a.Token, &a.CreatorBonus)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
 	return &a, err
+}
+
+// UserScanEntry holds a single scan record with resolved activity info and points.
+type UserScanEntry struct {
+	ActivityName string
+	ActivityType models.ActivityType
+	Points       int
+	ScannedAt    time.Time
+}
+
+func (db *DB) GetUserScans(userID int64, cfg *models.Config) ([]*UserScanEntry, error) {
+	rows, err := db.Query(`
+		SELECT a.name, a.type, a.points, s.scanned_at
+		FROM scans s
+		JOIN activities a ON a.id = s.activity_id
+		WHERE s.user_id = ?
+		ORDER BY s.scanned_at DESC
+	`, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var entries []*UserScanEntry
+	for rows.Next() {
+		var e UserScanEntry
+		var pts *int
+		var scannedAt string
+		if err := rows.Scan(&e.ActivityName, &e.ActivityType, &pts, &scannedAt); err != nil {
+			return nil, err
+		}
+		t, err := parseTime(scannedAt)
+		if err != nil {
+			return nil, err
+		}
+		e.ScannedAt = t
+		if pts != nil {
+			e.Points = *pts
+		} else if e.ActivityType == models.ActivityHidden {
+			e.Points = cfg.DefaultHiddenPoints
+		} else {
+			e.Points = cfg.DefaultWorkshopPoints
+		}
+		entries = append(entries, &e)
+	}
+	return entries, rows.Err()
+}
+
+func (db *DB) GetUserRank(userID int64) (int, error) {
+	var rank int
+	err := db.QueryRow(`
+		SELECT COUNT(*) + 1
+		FROM users
+		WHERE total_points > (SELECT total_points FROM users WHERE id = ?)
+		AND hidden_from_leaderboard = 0
+	`, userID).Scan(&rank)
+	return rank, err
 }
 
 func (db *DB) ApplyPenalty(userID int64, penalty int) (int, error) {
