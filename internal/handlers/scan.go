@@ -105,13 +105,27 @@ func (h *ScanHandler) Scan(c echo.Context) error {
 		return err
 	}
 
-	// Award creator bonus for workshop activities (skip if the scanner is the creator)
-	if activity.Type == models.ActivityWorkshop && activity.CreatorBonus &&
-		activity.CreatedBy != 0 && activity.CreatedBy != user.ID {
+	// Award creator bonus for workshop activities (skip if the scanner is the creator or a collaborator)
+	if activity.Type == models.ActivityWorkshop && activity.CreatorBonus && activity.CreatedBy != 0 {
 		bonus := points * cfg.CreatorBonusPercentage / 100
 		if bonus > 0 {
-			if err := h.DB.AddPoints(activity.CreatedBy, bonus); err != nil {
-				c.Logger().Errorf("creator bonus failed for activity %d: %v", activity.ID, err)
+			if activity.CreatedBy != user.ID {
+				if err := h.DB.AddPoints(activity.CreatedBy, bonus); err != nil {
+					c.Logger().Errorf("creator bonus failed for activity %d: %v", activity.ID, err)
+				}
+			}
+			collaborators, err := h.DB.GetCollaborators(activity.ID)
+			if err != nil {
+				c.Logger().Errorf("get collaborators failed for activity %d: %v", activity.ID, err)
+			} else {
+				for _, collab := range collaborators {
+					if collab.ID == user.ID {
+						continue // scanner is a collaborator, skip
+					}
+					if err := h.DB.AddPoints(collab.ID, bonus); err != nil {
+						c.Logger().Errorf("collaborator bonus failed for user %d activity %d: %v", collab.ID, activity.ID, err)
+					}
+				}
 			}
 		}
 	}

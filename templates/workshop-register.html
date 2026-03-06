@@ -36,18 +36,21 @@
     <h2>Deine Workshops</h2>
     <div class="activity-list">
       {{range .Activities}}
-      <div class="activity-item">
-        <div class="activity-info">
-          <strong>{{.Name}}</strong>
-          {{if .Description}}<span class="activity-desc">{{.Description}}</span>{{end}}
-          {{if .Location}}<span class="activity-desc">📍 {{.Location}}</span>{{end}}
-          <span class="badge {{if .Enabled}}badge-ok{{else}}badge-pending{{end}}">
-            {{if .Enabled}}✓ Aktiv{{else}}⏳ Ausstehend{{end}}
-          </span>
+      <div class="activity-item" style="flex-direction:column; align-items:stretch; gap:.75rem">
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:.5rem">
+          <div class="activity-info">
+            <strong>{{.Name}}</strong>
+            {{if .Description}}<span class="activity-desc">{{.Description}}</span>{{end}}
+            {{if .Location}}<span class="activity-desc">📍 {{.Location}}</span>{{end}}
+            <span class="badge {{if .Enabled}}badge-ok{{else}}badge-pending{{end}}">
+              {{if .Enabled}}✓ Aktiv{{else}}⏳ Ausstehend{{end}}
+            </span>
+          </div>
+          {{if .Enabled}}
+          <a href="/workshop/{{.ID}}/qr" class="btn btn-sm" style="flex-shrink:0">QR-Code</a>
+          {{end}}
         </div>
-        {{if .Enabled}}
-        <a href="/workshop/{{.ID}}/qr" class="btn btn-sm">QR-Code</a>
-        {{end}}
+        <div hx-get="/workshop/{{.ID}}/collaborators" hx-trigger="load" hx-swap="outerHTML"></div>
       </div>
       {{end}}
     </div>
@@ -64,7 +67,7 @@
           <strong>{{.Name}}</strong>
           {{if .Description}}<span class="activity-desc">{{.Description}}</span>{{end}}
           {{if .Location}}<span class="activity-desc">📍 {{.Location}}</span>{{end}}
-          <span class="activity-desc">von {{.CreatorName}}</span>
+          <span class="activity-desc">von {{.CreatorName}}{{if .CollaboratorNames}}, {{.CollaboratorNames}}{{end}}</span>
           <span class="badge {{if .Enabled}}badge-ok{{else}}badge-pending{{end}}">
             {{if .Enabled}}✓ Aktiv{{else}}⏳ Ausstehend{{end}}
           </span>

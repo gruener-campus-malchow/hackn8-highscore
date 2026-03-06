@@ -33,7 +33,7 @@
         </span>
       </div>
       <div class="myscore-entry-right">
-        <span class="myscore-entry-points">+{{.Points}}</span>
+        <span class="myscore-entry-points">{{if ge .Points 0}}+{{end}}{{.Points}}</span>
         <span class="myscore-entry-time">{{.ScannedAt.Format "02.01. 15:04"}}</span>
       </div>
     </div>

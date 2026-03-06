@@ -33,6 +33,7 @@
       {{end}}
     </div>
 
+    {{if .IsCreatorOrAdmin}}
     {{with .Activity}}{{if ne .Type "hidden"}}
     <form action="/workshop/{{.ID}}/regenerate" method="post"
       onsubmit="return confirm('Token wirklich neu generieren? Der aktuelle QR-Code wird ungültig.')">
@@ -40,13 +41,14 @@
     </form>
     {{end}}{{end}}
     {{end}}
+    {{end}}
 
     <div style="margin-top:1.5rem; display:flex; gap:.75rem; justify-content:center">
-      {{if .IsAdmin}}
+      {{with .User}}{{if .IsAdmin}}
       <a href="/admin" class="btn btn-secondary">← Admin</a>
       {{else}}
       <a href="/workshop/register" class="btn btn-secondary">← Workshops</a>
-      {{end}}
+      {{end}}{{end}}
       <a href="/" class="btn btn-primary">Leaderboard</a>
     </div>
   </div>

@@ -40,7 +40,8 @@ type Activity struct {
 	Points        *int // nil = use config default
 	Token         string
 	CreatedAt     time.Time
-	CreatorBonus  bool // workshop creator gets a percentage of scan points
+	CreatorBonus  bool   // workshop creator gets a percentage of scan points
+	ScanMessage   string // custom message shown on successful scan (hidden activities)
 }
 
 type Scan struct {

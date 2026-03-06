@@ -148,17 +148,36 @@ func (h *AdminHandler) CreateHiddenActivity(c echo.Context) error {
 	raw := strings.TrimSpace(c.FormValue("points"))
 	if raw != "" {
 		n, err := strconv.Atoi(raw)
-		if err != nil || n < 0 {
+		if err != nil {
 			return c.Redirect(http.StatusFound, "/admin?error=invalid_points")
 		}
 		pointsPtr = &n
 	}
 
-	_, err := h.DB.CreateHiddenActivity(name, pointsPtr, user.ID)
+	activity, err := h.DB.CreateHiddenActivity(name, pointsPtr, user.ID)
 	if err != nil {
 		return err
 	}
+
+	if msg := strings.TrimSpace(c.FormValue("scan_message")); msg != "" {
+		if err := h.DB.SetActivityScanMessage(activity.ID, msg); err != nil {
+			return err
+		}
+	}
+
 	return c.Redirect(http.StatusFound, "/admin?success=hidden_created")
+}
+
+func (h *AdminHandler) SetActivityScanMessage(c echo.Context) error {
+	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest)
+	}
+	msg := strings.TrimSpace(c.FormValue("scan_message"))
+	if err := h.DB.SetActivityScanMessage(id, msg); err != nil {
+		return err
+	}
+	return c.Redirect(http.StatusFound, "/admin")
 }
 
 func (h *AdminHandler) UpdateConfig(c echo.Context) error {

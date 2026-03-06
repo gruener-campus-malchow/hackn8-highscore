@@ -1,0 +1,37 @@
+{{define "partial"}}
+<div id="collaborators-{{.ActivityID}}" style="border-top:1px solid var(--border); padding-top:.6rem">
+  <div style="font-size:.85rem; font-weight:600; margin-bottom:.4rem; color:var(--text-muted,#666)">Mitveranstalter</div>
+  {{if .Collaborators}}
+  <div style="display:flex; flex-wrap:wrap; gap:.4rem; margin-bottom:.5rem">
+    {{range .Collaborators}}
+    <span style="display:inline-flex; align-items:center; gap:.3rem; background:var(--card-bg,#eee); border:1px solid var(--border); border-radius:.4rem; padding:.15rem .5rem; font-size:.85rem">
+      {{.DisplayName}}
+      <form hx-post="/workshop/{{$.ActivityID}}/collaborator/remove"
+            hx-target="#collaborators-{{$.ActivityID}}"
+            hx-swap="outerHTML"
+            style="margin:0; display:inline">
+        <input type="hidden" name="user_id" value="{{.ID}}">
+        <button type="submit" style="background:none; border:none; cursor:pointer; padding:0; line-height:1; color:inherit; font-size:.8rem; opacity:.6" title="Entfernen">✕</button>
+      </form>
+    </span>
+    {{end}}
+  </div>
+  {{end}}
+  {{if .AvailableUsers}}
+  <form hx-post="/workshop/{{.ActivityID}}/collaborator/add"
+        hx-target="#collaborators-{{.ActivityID}}"
+        hx-swap="outerHTML"
+        style="display:flex; gap:.4rem; align-items:center">
+    <select name="user_id" style="flex:1; min-width:0">
+      <option value="">Nutzer hinzufügen…</option>
+      {{range .AvailableUsers}}
+      <option value="{{.ID}}">{{.DisplayName}}</option>
+      {{end}}
+    </select>
+    <button type="submit" class="btn btn-sm btn-primary" style="flex-shrink:0">+</button>
+  </form>
+  {{else if not .Collaborators}}
+  <span class="muted" style="font-size:.85rem">Noch keine anderen Nutzer registriert.</span>
+  {{end}}
+</div>
+{{end}}

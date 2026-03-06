@@ -5,9 +5,11 @@
 <div class="form-page">
   <div class="form-card scan-result">
     {{if eq .Status "success"}}
-    <div class="scan-icon scan-ok">✓</div>
-    <h1>+{{.Points}} Punkte!</h1>
+    {{if lt .Points 0}}<div class="scan-icon scan-err">✕</div>
+    <h1>{{.Points}} Punkte!</h1>{{else}}<div class="scan-icon scan-ok">✓</div>
+    <h1>+{{.Points}} Punkte!</h1>{{end}}
     <p>Du hast <strong>{{with .Activity}}{{.Name}}{{end}}</strong> erfolgreich abgeschlossen.</p>
+    {{with .Activity}}{{if .ScanMessage}}<p class="scan-message">{{.ScanMessage}}</p>{{end}}{{end}}
     {{else if eq .Status "already"}}
     <div class="scan-icon scan-warn">!</div>
     <h1>Schon gescannt</h1>

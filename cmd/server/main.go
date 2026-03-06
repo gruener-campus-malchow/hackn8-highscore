@@ -115,6 +115,9 @@ func main() {
 	e.GET("/workshop/:id/qr", workshopH.ShowQR, requireLogin)
 	e.GET("/workshop/:id/qr-partial", workshopH.ShowQRPartial, requireLogin)
 	e.POST("/workshop/:id/regenerate", workshopH.RegenerateToken, requireLogin)
+	e.GET("/workshop/:id/collaborators", workshopH.CollaboratorsPartial, requireLogin)
+	e.POST("/workshop/:id/collaborator/add", workshopH.AddCollaborator, requireLogin)
+	e.POST("/workshop/:id/collaborator/remove", workshopH.RemoveCollaborator, requireLogin)
 
 	// Admin
 	e.GET("/admin", adminH.ShowDashboard, requireAdmin)
@@ -123,6 +126,7 @@ func main() {
 	e.POST("/admin/activity/hidden", adminH.CreateHiddenActivity, requireAdmin)
 	e.POST("/admin/activity/:id/delete", adminH.DeleteActivity, requireAdmin)
 	e.POST("/admin/activity/:id/toggle-creator-bonus", adminH.ToggleCreatorBonus, requireAdmin)
+	e.POST("/admin/activity/:id/scan-message", adminH.SetActivityScanMessage, requireAdmin)
 	e.GET("/admin/activity/:id/qr", adminH.ShowQR, requireAdmin)
 	e.POST("/admin/config", adminH.UpdateConfig, requireAdmin)
 	e.POST("/admin/user/:id/promote", adminH.PromoteUser, requireAdmin)

@@ -119,7 +119,12 @@
         </div>
         <div class="form-group">
           <label>Punkte (leer = Standard)</label>
-          <input type="number" name="points" placeholder="{{.Config.DefaultHiddenPoints}}" min="0">
+          <input type="number" name="points" placeholder="{{.Config.DefaultHiddenPoints}}">
+        </div>
+        <div class="form-group">
+          <label>Nachricht beim Scan (optional)</label>
+          <input type="text" name="scan_message" placeholder="z.B. Du hast den Geheimraum gefunden!">
+          <small class="muted">Wird nach erfolgreichem Scan angezeigt.</small>
         </div>
       </div>
       <button type="submit" class="btn btn-primary">Erstellen</button>
@@ -201,7 +206,14 @@
         <tbody>
           {{range .Activities}}
           <tr>
-            <td>{{.Name}}{{if .Description}}<br><small class="muted">{{.Description}}</small>{{end}}</td>
+            <td>{{.Name}}{{if .Description}}<br><small class="muted">{{.Description}}</small>{{end}}
+              {{if eq (printf "%s" .Type) "hidden"}}
+              <form action="/admin/activity/{{.ID}}/scan-message" method="post" class="inline-form" style="margin-top:0.35rem">
+                <input type="text" name="scan_message" value="{{.ScanMessage}}" placeholder="Scan-Nachricht…" class="pts-input" style="width:12rem">
+                <button type="submit" class="btn btn-xs">✓</button>
+              </form>
+              {{end}}
+            </td>
             <td>
               {{if eq (printf "%s" .Type) "workshop"}}Workshop{{else}}Versteckt{{end}}
             </td>
