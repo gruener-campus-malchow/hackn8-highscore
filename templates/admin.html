@@ -140,13 +140,13 @@
           <tr>
             <td>{{.DisplayName}}</td>
             <td><code>{{.TicketCode}}</code></td>
-            <td>{{.TotalPoints}}</td>
-            <td>{{if .IsAdmin}}<span class="badge badge-ok">Admin</span>{{else}}<span class="badge">Nutzer</span>{{end}}</td>
-            <td>
+            <td data-points-cell>{{.TotalPoints}}</td>
+            <td data-role-cell>{{if .IsAdmin}}<span class="badge badge-ok">Admin</span>{{else}}<span class="badge">Nutzer</span>{{end}}</td>
+            <td data-hidden-cell>
               {{if .HiddenFromLeaderboard}}<span class="badge badge-pending">Versteckt</span>{{else}}<span class="badge badge-ok">Sichtbar</span>{{end}}
             </td>
             <td>
-              <form action="/admin/user/{{.ID}}/points" method="post" class="inline-form">
+              <form action="/admin/user/{{.ID}}/points" method="post" class="inline-form" data-adjust-points-form>
                 <input type="number" name="delta" placeholder="±Δ" class="pts-input" required>
                 <button type="submit" class="btn btn-xs">✓</button>
               </form>
@@ -154,15 +154,17 @@
             <td class="action-col">
               {{if .IsAdmin}}
               <form action="/admin/user/{{.ID}}/demote" method="post" style="display:inline"
-                    onsubmit="return confirm('Admin-Rechte entziehen?')">
+                    data-admin-toggle-form data-action="demote" data-user-id="{{.ID}}">
                 <button type="submit" class="btn btn-xs btn-warn">Degradieren</button>
               </form>
               {{else}}
-              <form action="/admin/user/{{.ID}}/promote" method="post" style="display:inline">
+              <form action="/admin/user/{{.ID}}/promote" method="post" style="display:inline"
+                    data-admin-toggle-form data-action="promote" data-user-id="{{.ID}}">
                 <button type="submit" class="btn btn-xs btn-ok">Zum Admin</button>
               </form>
               {{end}}
-              <form action="/admin/user/{{.ID}}/toggle-hidden" method="post" style="display:inline">
+              <form action="/admin/user/{{.ID}}/toggle-hidden" method="post" style="display:inline"
+                    data-toggle-hidden-form>
                 <button type="submit" class="btn btn-xs {{if .HiddenFromLeaderboard}}btn-ok{{else}}btn-warn{{end}}">
                   {{if .HiddenFromLeaderboard}}Einblenden{{else}}Ausblenden{{end}}
                 </button>
@@ -179,7 +181,7 @@
   </details>
 
   <!-- Activities -->
-  <details class="admin-section">
+  <details class="admin-section" id="activities-section">
     <summary><h2>Aktivitäten</h2></summary>
     {{if .Activities}}
     <div class="admin-table-wrap">
@@ -212,14 +214,15 @@
               </form>
             </td>
             <td>{{.ScanCount}}</td>
-            <td>
+            <td data-status-cell>
               <span class="badge {{if .Enabled}}badge-ok{{else}}badge-pending{{end}}">
                 {{if .Enabled}}Aktiv{{else}}Inaktiv{{end}}
               </span>
             </td>
             <td>
               {{if eq (printf "%s" .Type) "workshop"}}
-              <form action="/admin/activity/{{.ID}}/toggle-creator-bonus" method="post" style="display:inline">
+              <form action="/admin/activity/{{.ID}}/toggle-creator-bonus" method="post" style="display:inline"
+                    data-toggle-bonus-form>
                 <button type="submit" class="btn btn-xs {{if .CreatorBonus}}btn-ok{{else}}btn-warn{{end}}">
                   {{if .CreatorBonus}}An{{else}}Aus{{end}}
                 </button>
@@ -227,7 +230,7 @@
               {{else}}–{{end}}
             </td>
             <td class="action-col">
-              <form action="/admin/activity/{{.ID}}/toggle" method="post" style="display:inline">
+              <form action="/admin/activity/{{.ID}}/toggle" method="post" style="display:inline" data-toggle-form>
                 <button type="submit" class="btn btn-xs {{if .Enabled}}btn-warn{{else}}btn-ok{{end}}">
                   {{if .Enabled}}Deaktivieren{{else}}Aktivieren{{end}}
                 </button>
@@ -248,4 +251,101 @@
     {{end}}
   </details>
 </div>
+
+<script>
+function ajaxForm(selector, handler) {
+  document.querySelectorAll(selector).forEach(function(form) {
+    form.addEventListener('submit', function(e) {
+      e.preventDefault();
+      handler(form, e);
+    });
+  });
+}
+
+function doFetch(form, btn, onSuccess) {
+  btn.disabled = true;
+  fetch(form.action, {
+    method: 'POST',
+    headers: { 'X-Requested-With': 'fetch' },
+    credentials: 'same-origin'
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) { onSuccess(data); btn.disabled = false; })
+  .catch(function() { btn.disabled = false; });
+}
+
+// Toggle activity enabled/disabled
+ajaxForm('form[data-toggle-form]', function(form) {
+  var btn = form.querySelector('button');
+  doFetch(form, btn, function(data) {
+    var enabled = data.enabled;
+    var row = form.closest('tr');
+    var span = row.querySelector('[data-status-cell] span');
+    span.className = 'badge ' + (enabled ? 'badge-ok' : 'badge-pending');
+    span.textContent = enabled ? 'Aktiv' : 'Inaktiv';
+    btn.className = 'btn btn-xs ' + (enabled ? 'btn-warn' : 'btn-ok');
+    btn.textContent = enabled ? 'Deaktivieren' : 'Aktivieren';
+  });
+});
+
+// Toggle creator bonus
+ajaxForm('form[data-toggle-bonus-form]', function(form) {
+  var btn = form.querySelector('button');
+  doFetch(form, btn, function(data) {
+    var bonus = data.creator_bonus;
+    btn.className = 'btn btn-xs ' + (bonus ? 'btn-ok' : 'btn-warn');
+    btn.textContent = bonus ? 'An' : 'Aus';
+  });
+});
+
+// Promote / demote admin
+ajaxForm('form[data-admin-toggle-form]', function(form) {
+  if (form.dataset.action === 'demote' && !confirm('Admin-Rechte entziehen?')) return;
+  var btn = form.querySelector('button');
+  doFetch(form, btn, function(data) {
+    var isAdmin = data.is_admin;
+    var row = form.closest('tr');
+    var roleSpan = row.querySelector('[data-role-cell] span');
+    roleSpan.className = 'badge' + (isAdmin ? ' badge-ok' : '');
+    roleSpan.textContent = isAdmin ? 'Admin' : 'Nutzer';
+    var uid = form.dataset.userId;
+    if (isAdmin) {
+      form.action = '/admin/user/' + uid + '/demote';
+      form.dataset.action = 'demote';
+      btn.className = 'btn btn-xs btn-warn';
+      btn.textContent = 'Degradieren';
+    } else {
+      form.action = '/admin/user/' + uid + '/promote';
+      form.dataset.action = 'promote';
+      btn.className = 'btn btn-xs btn-ok';
+      btn.textContent = 'Zum Admin';
+    }
+  });
+});
+
+// Toggle leaderboard hidden
+ajaxForm('form[data-toggle-hidden-form]', function(form) {
+  var btn = form.querySelector('button');
+  doFetch(form, btn, function(data) {
+    var hidden = data.hidden;
+    var row = form.closest('tr');
+    var hiddenSpan = row.querySelector('[data-hidden-cell] span');
+    hiddenSpan.className = 'badge ' + (hidden ? 'badge-pending' : 'badge-ok');
+    hiddenSpan.textContent = hidden ? 'Versteckt' : 'Sichtbar';
+    btn.className = 'btn btn-xs ' + (hidden ? 'btn-ok' : 'btn-warn');
+    btn.textContent = hidden ? 'Einblenden' : 'Ausblenden';
+  });
+});
+
+// Adjust user points
+ajaxForm('form[data-adjust-points-form]', function(form) {
+  var btn = form.querySelector('button');
+  doFetch(form, btn, function(data) {
+    if (data.total_points !== undefined) {
+      form.closest('tr').querySelector('[data-points-cell]').textContent = data.total_points;
+    }
+    form.querySelector('input').value = '';
+  });
+});
+</script>
 {{end}}

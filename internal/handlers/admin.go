@@ -73,6 +73,9 @@ func (h *AdminHandler) PromoteUser(c echo.Context) error {
 	if err := h.DB.SetAdminStatus(id, true); err != nil {
 		return err
 	}
+	if c.Request().Header.Get("X-Requested-With") == "fetch" {
+		return c.JSON(http.StatusOK, map[string]any{"is_admin": true})
+	}
 	return c.Redirect(http.StatusFound, "/admin?success=user_promoted")
 }
 
@@ -83,10 +86,16 @@ func (h *AdminHandler) DemoteUser(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest)
 	}
 	if id == self.ID {
+		if c.Request().Header.Get("X-Requested-With") == "fetch" {
+			return c.JSON(http.StatusBadRequest, map[string]any{"error": "cannot_demote_self"})
+		}
 		return c.Redirect(http.StatusFound, "/admin?error=cannot_demote_self")
 	}
 	if err := h.DB.SetAdminStatus(id, false); err != nil {
 		return err
+	}
+	if c.Request().Header.Get("X-Requested-With") == "fetch" {
+		return c.JSON(http.StatusOK, map[string]any{"is_admin": false})
 	}
 	return c.Redirect(http.StatusFound, "/admin?success=user_demoted")
 }
@@ -96,8 +105,12 @@ func (h *AdminHandler) ToggleActivity(c echo.Context) error {
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest)
 	}
-	if err := h.DB.ToggleActivity(id); err != nil {
+	enabled, err := h.DB.ToggleActivity(id)
+	if err != nil {
 		return err
+	}
+	if c.Request().Header.Get("X-Requested-With") == "fetch" {
+		return c.JSON(http.StatusOK, map[string]any{"enabled": enabled})
 	}
 	return c.Redirect(http.StatusFound, "/admin")
 }
@@ -255,6 +268,10 @@ func (h *AdminHandler) ToggleLeaderboardHidden(c echo.Context) error {
 	if err := h.DB.SetLeaderboardHidden(id, !user.HiddenFromLeaderboard); err != nil {
 		return err
 	}
+	newHidden := !user.HiddenFromLeaderboard
+	if c.Request().Header.Get("X-Requested-With") == "fetch" {
+		return c.JSON(http.StatusOK, map[string]any{"hidden": newHidden})
+	}
 	if user.HiddenFromLeaderboard {
 		return c.Redirect(http.StatusFound, "/admin?success=leaderboard_shown")
 	}
@@ -277,6 +294,13 @@ func (h *AdminHandler) AdjustUserPoints(c echo.Context) error {
 	if err := h.DB.AddPoints(id, delta); err != nil {
 		return err
 	}
+	if c.Request().Header.Get("X-Requested-With") == "fetch" {
+		u, err := h.DB.GetUserByID(id)
+		if err != nil || u == nil {
+			return c.JSON(http.StatusOK, map[string]any{})
+		}
+		return c.JSON(http.StatusOK, map[string]any{"total_points": u.TotalPoints})
+	}
 	return c.Redirect(http.StatusFound, "/admin?success=points_adjusted")
 }
 
@@ -296,8 +320,12 @@ func (h *AdminHandler) ToggleCreatorBonus(c echo.Context) error {
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest)
 	}
-	if err := h.DB.ToggleCreatorBonus(id); err != nil {
+	bonus, err := h.DB.ToggleCreatorBonus(id)
+	if err != nil {
 		return err
+	}
+	if c.Request().Header.Get("X-Requested-With") == "fetch" {
+		return c.JSON(http.StatusOK, map[string]any{"creator_bonus": bonus})
 	}
 	return c.Redirect(http.StatusFound, "/admin")
 }

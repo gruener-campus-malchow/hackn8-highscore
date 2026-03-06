@@ -91,7 +91,7 @@ func main() {
 			act.Points = w.points
 		}
 		if w.enabled {
-			if err := database.ToggleActivity(act.ID); err != nil {
+			if _, err := database.ToggleActivity(act.ID); err != nil {
 				log.Fatalf("enable workshop %q: %v", w.name, err)
 			}
 		}

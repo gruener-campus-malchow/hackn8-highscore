@@ -368,9 +368,14 @@ func (db *DB) GetUserActivities(userID int64) ([]*models.Activity, error) {
 	return activities, rows.Err()
 }
 
-func (db *DB) ToggleActivity(id int64) error {
+func (db *DB) ToggleActivity(id int64) (bool, error) {
 	_, err := db.Exec(`UPDATE activities SET enabled = NOT enabled WHERE id = ?`, id)
-	return err
+	if err != nil {
+		return false, err
+	}
+	var enabled bool
+	err = db.QueryRow(`SELECT enabled FROM activities WHERE id = ?`, id).Scan(&enabled)
+	return enabled, err
 }
 
 func (db *DB) SetActivityPoints(id int64, points *int) error {
@@ -477,9 +482,14 @@ func (db *DB) DeleteActivity(id int64) error {
 	return err
 }
 
-func (db *DB) ToggleCreatorBonus(id int64) error {
+func (db *DB) ToggleCreatorBonus(id int64) (bool, error) {
 	_, err := db.Exec(`UPDATE activities SET creator_bonus = NOT creator_bonus WHERE id = ? AND type = 'workshop'`, id)
-	return err
+	if err != nil {
+		return false, err
+	}
+	var bonus bool
+	err = db.QueryRow(`SELECT creator_bonus FROM activities WHERE id = ?`, id).Scan(&bonus)
+	return bonus, err
 }
 
 func (db *DB) GetUserCount() (int, error) {
