@@ -60,22 +60,37 @@ func (h *AuthHandler) Login(c echo.Context) error {
 		return c.Redirect(http.StatusFound, "/auth/login?error=invalid")
 	}
 
-	if cfg.RequirePretixLogin && os.Getenv("DEBUG_NO_PRETIX") == "" {
-		if server := os.Getenv("PRETIX_SERVER"); server != "" {
-			order, err := pretix.GetOrder(server, os.Getenv("PRETIX_ORGANIZER"), os.Getenv("PRETIX_EVENT"), os.Getenv("PRETIX_API_KEY"), ticketCode)
-			if err != nil {
-				c.Logger().Errorf("pretix validation error: %v", err)
-				return c.Redirect(http.StatusFound, "/auth/login?error=pretix_unavailable")
+	adminTicket := strings.TrimSpace(os.Getenv("ADMIN_TICKET"))
+	isAdminTicket := adminTicket != "" && ticketCode == adminTicket
+
+	if cfg.RequirePretixLogin && os.Getenv("DEBUG_NO_PRETIX") == "" && !isAdminTicket {
+		existing, err := h.DB.FindUsersByTicketPrefix(ticketCode)
+		if err != nil {
+			return err
+		}
+		if len(existing) == 1 {
+			// Returning user — use stored ticket code, skip Pretix check.
+			ticketCode = existing[0].TicketCode
+		} else if len(existing) == 0 {
+			// New user — validate against Pretix.
+			if server := os.Getenv("PRETIX_SERVER"); server != "" {
+				order, err := pretix.GetOrder(server, os.Getenv("PRETIX_ORGANIZER"), os.Getenv("PRETIX_EVENT"), os.Getenv("PRETIX_API_KEY"), ticketCode)
+				if err != nil {
+					c.Logger().Errorf("pretix validation error: %v", err)
+					return c.Redirect(http.StatusFound, "/auth/login?error=pretix_unavailable")
+				}
+				if order == nil || order.Status != "p" {
+					return c.Redirect(http.StatusFound, "/auth/login?error=invalid")
+				}
+				if len(order.Positions) > 1 {
+					return c.Redirect(http.StatusFound, fmt.Sprintf("/auth/select-attendee?code=%s&next=%s", ticketCode, url.QueryEscape(next)))
+				}
 			}
-			if order == nil || order.Status != "p" {
-				return c.Redirect(http.StatusFound, "/auth/login?error=invalid")
-			}
-			if len(order.Positions) > 1 {
-				return c.Redirect(http.StatusFound, fmt.Sprintf("/auth/select-attendee?code=%s&next=%s", ticketCode, url.QueryEscape(next)))
-			}
-			if len(order.Positions) == 1 {
-				ticketCode = fmt.Sprintf("%s-%d", ticketCode, order.Positions[0].PositionID)
-			}
+		}
+		// len(existing) > 1: multiple attendees on same ticket — fall through to
+		// select-attendee (which re-validates via Pretix to show names).
+		if len(existing) > 1 {
+			return c.Redirect(http.StatusFound, fmt.Sprintf("/auth/select-attendee?code=%s&next=%s", ticketCode, url.QueryEscape(next)))
 		}
 	}
 

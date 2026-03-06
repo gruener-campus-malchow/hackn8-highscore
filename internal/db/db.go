@@ -123,6 +123,29 @@ func randomToken() (string, error) {
 
 // User operations
 
+// FindUsersByTicketPrefix returns all users whose ticket_code equals prefix or
+// matches the pattern "prefix-N". Used to detect returning users before Pretix
+// validation.
+func (db *DB) FindUsersByTicketPrefix(prefix string) ([]*models.User, error) {
+	rows, err := db.Query(
+		`SELECT id, ticket_code, nickname, is_admin, total_points, hidden_from_leaderboard FROM users WHERE ticket_code = ? OR ticket_code LIKE ?`,
+		prefix, prefix+"-%",
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var users []*models.User
+	for rows.Next() {
+		var u models.User
+		if err := rows.Scan(&u.ID, &u.TicketCode, &u.Nickname, &u.IsAdmin, &u.TotalPoints, &u.HiddenFromLeaderboard); err != nil {
+			return nil, err
+		}
+		users = append(users, &u)
+	}
+	return users, rows.Err()
+}
+
 func (db *DB) GetOrCreateUser(ticketCode string) (*models.User, bool, error) {
 	var u models.User
 	err := db.QueryRow(
@@ -494,7 +517,7 @@ func (db *DB) ToggleCreatorBonus(id int64) (bool, error) {
 
 func (db *DB) GetUserCount() (int, error) {
 	var count int
-	err := db.QueryRow(`SELECT COUNT(*) FROM users`).Scan(&count)
+	err := db.QueryRow(`SELECT COUNT(*) FROM users WHERE hidden_from_leaderboard = 0`).Scan(&count)
 	return count, err
 }
 
