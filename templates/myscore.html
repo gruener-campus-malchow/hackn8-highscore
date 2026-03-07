@@ -2,18 +2,34 @@
 
 {{define "content"}}
 <div class="myscore-page">
+  {{if .IsAdmin}}
+  <div class="myscore-admin-bar">
+    <label for="user-select">Score ansehen:</label>
+    <select id="user-select" onchange="if(this.value) window.location=this.value">
+      <option value="/myscore" {{if not .ViewedUser}}selected{{end}}>— Eigener Score —</option>
+      {{range .AllUsers}}
+      <option value="/admin/user/{{.ID}}/score"
+        {{if $.ViewedUser}}{{if eq $.ViewedUser.ID .ID}}selected{{end}}{{end}}>
+        {{.DisplayName}} ({{.TotalPoints}} Pkt.)
+      </option>
+      {{end}}
+    </select>
+    {{if .ViewedUser}}<a href="/admin" class="btn btn-xs">← Admin</a>{{end}}
+  </div>
+  {{end}}
+
   <div class="myscore-header">
-    <h1>Dein Score</h1>
+    <h1>{{if .ViewedUser}}Score: {{.Subject.DisplayName}}{{else}}Dein Score{{end}}</h1>
     <div class="myscore-stats">
       <div class="myscore-stat">
-        <span class="myscore-stat-value">{{.User.TotalPoints}}</span>
+        <span class="myscore-stat-value">{{.Subject.TotalPoints}}</span>
         <span class="myscore-stat-label">Punkte</span>
       </div>
       <div class="myscore-stat">
         <span class="myscore-stat-value">{{len .Scans}}</span>
         <span class="myscore-stat-label">Scans</span>
       </div>
-      {{if not .User.HiddenFromLeaderboard}}
+      {{if not .Subject.HiddenFromLeaderboard}}
       <div class="myscore-stat">
         <span class="myscore-stat-value">#{{.Rank}}</span>
         <span class="myscore-stat-label">Platz</span>
@@ -52,6 +68,28 @@
   max-width: 600px;
   margin: 2rem auto;
   padding: 0 1rem;
+}
+
+.myscore-admin-bar {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  background: var(--gray);
+  border-radius: var(--radius-sm);
+  padding: .6rem 1rem;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.myscore-admin-bar label {
+  font-size: .85rem;
+  color: var(--gray-text);
+  white-space: nowrap;
+}
+
+.myscore-admin-bar select {
+  flex: 1;
+  min-width: 0;
 }
 
 .myscore-header {

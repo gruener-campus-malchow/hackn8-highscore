@@ -323,6 +323,43 @@ func (h *AdminHandler) AdjustUserPoints(c echo.Context) error {
 	return c.Redirect(http.StatusFound, "/admin?success=points_adjusted")
 }
 
+func (h *AdminHandler) ShowUserScore(c echo.Context) error {
+	admin := c.Get("user").(*models.User)
+	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest)
+	}
+	target, err := h.DB.GetUserByID(id)
+	if err != nil || target == nil {
+		return echo.NewHTTPError(http.StatusNotFound)
+	}
+	cfg, err := h.DB.GetConfig()
+	if err != nil {
+		return err
+	}
+	scans, err := h.DB.GetUserScans(id, cfg)
+	if err != nil {
+		return err
+	}
+	rank, err := h.DB.GetUserRank(id)
+	if err != nil {
+		return err
+	}
+	users, err := h.DB.GetAllUsers()
+	if err != nil {
+		return err
+	}
+	return c.Render(http.StatusOK, "myscore.html", myScoreData{
+		User:       admin,
+		Subject:    target,
+		Scans:      scans,
+		Rank:       rank,
+		IsAdmin:    true,
+		AllUsers:   users,
+		ViewedUser: target,
+	})
+}
+
 func (h *AdminHandler) DeleteActivity(c echo.Context) error {
 	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {

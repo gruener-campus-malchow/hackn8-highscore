@@ -133,6 +133,7 @@ func main() {
 	e.POST("/admin/user/:id/demote", adminH.DemoteUser, requireAdmin)
 	e.POST("/admin/user/:id/toggle-hidden", adminH.ToggleLeaderboardHidden, requireAdmin)
 	e.POST("/admin/user/:id/points", adminH.AdjustUserPoints, requireAdmin)
+	e.GET("/admin/user/:id/score", adminH.ShowUserScore, requireAdmin)
 
 	log.Printf("Starting on %s", addr)
 	e.Logger.Fatal(e.Start(addr))

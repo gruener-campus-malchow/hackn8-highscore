@@ -13,9 +13,13 @@ type MyScoreHandler struct {
 }
 
 type myScoreData struct {
-	User  *models.User
-	Scans []*db.UserScanEntry
-	Rank  int
+	User       *models.User   // logged-in user
+	Subject    *models.User   // user whose score is shown (= User when viewing own)
+	Scans      []*db.UserScanEntry
+	Rank       int
+	IsAdmin    bool
+	AllUsers   []*models.User
+	ViewedUser *models.User // non-nil when admin views another user
 }
 
 func (h *MyScoreHandler) ShowMyScore(c echo.Context) error {
@@ -36,9 +40,21 @@ func (h *MyScoreHandler) ShowMyScore(c echo.Context) error {
 		return err
 	}
 
-	return c.Render(http.StatusOK, "myscore.html", myScoreData{
-		User:  user,
-		Scans: scans,
-		Rank:  rank,
-	})
+	data := myScoreData{
+		User:    user,
+		Subject: user,
+		Scans:   scans,
+		Rank:    rank,
+		IsAdmin: user.IsAdmin,
+	}
+
+	if user.IsAdmin {
+		users, err := h.DB.GetAllUsers()
+		if err != nil {
+			return err
+		}
+		data.AllUsers = users
+	}
+
+	return c.Render(http.StatusOK, "myscore.html", data)
 }
